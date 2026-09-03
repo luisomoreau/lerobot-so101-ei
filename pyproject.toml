@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lerobot-ei-demo"
+version = "0.1.0"
+description = "Booth demo UI for LeRobot SO-101 and Edge Impulse"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+hardware = [
+    "lerobot[core_scripts,feetech,training] @ git+https://github.com/huggingface/lerobot.git@v0.6.0",
+]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+lerobot-ei-demo = "lerobot_ei_demo.server:main"
+
+[tool.setuptools.packages.find]
+include = ["lerobot_ei_demo*"]
+
+[tool.setuptools.package-data]
+lerobot_ei_demo = ["frontend/*.html", "frontend/dist/**/*"]

@@ -1,0 +1,17 @@
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+/build/
+/dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+certs/
+models/*.eim
+lerobot_ei_demo/frontend/node_modules/
+lerobot_ei_demo/frontend/tsconfig*.tsbuildinfo

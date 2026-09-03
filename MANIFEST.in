@@ -1,0 +1,4 @@
+include README.md
+include PLAN.md
+include pyproject.toml
+recursive-include lerobot_ei_demo/frontend/dist *
