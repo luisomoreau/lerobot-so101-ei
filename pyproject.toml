@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hardware = [
-    "lerobot[core_scripts,feetech,training] @ git+https://github.com/huggingface/lerobot.git@v0.6.0",
+    "lerobot[feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0",
     "edge-impulse-linux>=1.2.1",
 ]
 dev = [
