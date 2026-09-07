@@ -20,9 +20,11 @@ The app combines:
 Install the hardware-enabled tool from a Git repository:
 
 ```bash
-uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/<org>/<repo>.git'
+uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 lerobot-ei-demo
 ```
+
+The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control, the Edge Impulse Linux inference runtime, and PyAudio for audio device support. The base install only includes the web application server and is intended for development or environments without connected hardware.
 
 For a checkout during development:
 
@@ -103,7 +105,7 @@ Each selected camera view carries its own model selector and **Inference on/off*
 
 The detected architecture is reported by `GET /api/edge-impulse/architecture`. Compatibility is derived from the deployment target text and `.eim` filename: `aarch64` hosts also accept `armv7` builds, and x86 builds are never accepted on ARM.
 
-The API key is stored by the backend in `~/.config/lerobot-ei-demo/config.json` (or the path set by `LEROBOT_EI_CONFIG`) with `0600` file permissions and a `0700` parent directory. The configuration rail loads the saved key when the app starts and saves it after connecting. Use a device configuration service instead for unattended booth deployments with centralized secret management.
+The API key is stored by the backend in the demo root at `.edge_impulse_config.json` (or the path set by `LEROBOT_EI_CONFIG`) with `0600` file permissions. This file is ignored by git. The configuration rail loads the saved key when the app starts and saves it after connecting. Use a device configuration service instead for unattended booth deployments with centralized secret management.
 
 ## Development
 

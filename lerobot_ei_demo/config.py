@@ -3,7 +3,9 @@ import os
 from pathlib import Path
 from threading import Lock
 
-DEFAULT_CONFIG_PATH = Path.home() / ".config" / "lerobot-ei-demo" / "config.json"
+DEFAULT_CONFIG_PATH = (
+    Path(__file__).resolve().parent.parent / ".edge_impulse_config.json"
+)
 
 
 class AppConfig:
@@ -29,11 +31,7 @@ class AppConfig:
                 "api_key": api_key.strip(),
                 "project_id": project_id,
             }
-            self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            try:
-                self.path.parent.chmod(0o700)
-            except OSError:
-                pass
+            self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_suffix(".tmp")
             temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
             temporary.chmod(0o600)

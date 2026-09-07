@@ -10,6 +10,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.edge_impulse_config.json
 *.log
 certs/
 models/*.eim
