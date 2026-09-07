@@ -26,16 +26,14 @@ uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/
 lerobot-ei-demo
 ```
 
-The `[hardware]` extra installs the pinned LeRobot v0.6.0 Feetech runtime for SO-101 control and the Edge Impulse Linux inference runtime. It intentionally does not install LeRobot's training or command-line script extras, which pull in unrelated native dependencies such as `evdev`. This demo uses image inference and does not require the SDK's optional PyAudio audio support. The base install only includes the web application server and is intended for development or environments without connected hardware.
+The `[hardware]` extra installs LeRobot's standard `core_scripts` and `feetech` extras for SO-101 control, plus the Edge Impulse Linux inference runtime. This includes the official `lerobot-find-port` and `lerobot-calibrate` commands. On Linux, the `core_scripts` extra also requires native build dependencies for `evdev`; install them before the hardware extra. The base install only includes the web application server and is intended for development or environments without connected hardware.
 
 On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does not download NVIDIA CUDA packages. Edge Impulse `.eim` deployments remain the app's accelerated inference path; PyTorch is used by the LeRobot control stack and does not target the VENTUNO Q NPU:
 
 ```bash
-UV_NO_SOURCES=1 \
-UV_INDEX_URL=https://download.pytorch.org/whl/cpu \
-UV_EXTRA_INDEX_URL=https://pypi.org/simple \
-UV_INDEX_STRATEGY=unsafe-best-match \
-uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+sudo apt update
+sudo apt install -y build-essential linux-libc-dev python3-dev
+uv tool install --torch-backend cpu 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 ```
 
 For a checkout during development:
@@ -45,14 +43,11 @@ uv sync --extra hardware --extra dev --native-tls
 uv run lerobot-ei-demo --port 8000
 ```
 
-On the VENTUNO Q, use the CPU backend while syncing the development environment:
+On the VENTUNO Q, use the official LeRobot CPU backend while installing the checkout:
 
 ```bash
-UV_NO_SOURCES=1 \
-UV_INDEX_URL=https://download.pytorch.org/whl/cpu \
-UV_EXTRA_INDEX_URL=https://pypi.org/simple \
-UV_INDEX_STRATEGY=unsafe-best-match \
-uv sync --extra hardware --extra dev --native-tls
+uv pip install --torch-backend cpu -e '.[hardware,dev]'
+uv run lerobot-ei-demo --port 8000
 ```
 
 Open the printed local URL. If port 8000 is already in use, choose another one:
@@ -76,10 +71,10 @@ The VENTUNO Q and client device must be on the same network, and any device fire
 The application currently targets one SO-101 leader and one SO-101 follower.
 
 1. Connect both arms by USB.
-2. Confirm the ports with the included port finder:
+2. Confirm the ports with LeRobot:
 
    ```bash
-   uv run lerobot-find-port
+  lerobot-find-port
    ```
 
 3. Ensure calibration files exist for both roles. The default LeRobot locations are under:
@@ -101,11 +96,11 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
 2. **Connect one arm at a time.** Connect the leader by USB and run:
 
   ```bash
-  uv run lerobot-find-port
+  lerobot-find-port
   ```
 
   Record the port reported after disconnecting and reconnecting that arm. Repeat for the follower. On the VENTUNO Q, ports normally look like `/dev/ttyACM0` or `/dev/ttyUSB0`; on macOS, they normally look like `/dev/cu.usbmodem...` or `/dev/cu.usbserial...`.
-3. **Prepare the calibration environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. The recommended setup is a separate Python 3.12 virtual environment, following LeRobot's official uv installation method. Calibrate the arms from your MacBook when possible, then copy the two JSON files to the VENTUNO Q:
+3. **Prepare the calibration environment.** The app uses LeRobot's standard `core_scripts` and `feetech` extras, so the calibration CLI and port finder come from the same package. Use a separate Python 3.12 virtual environment, following LeRobot's official uv installation method. Calibrate the arms from your MacBook when possible, then copy the two JSON files to the VENTUNO Q:
 
   ```bash
   mkdir -p ~/lerobot-calibration

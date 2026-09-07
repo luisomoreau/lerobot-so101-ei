@@ -49,10 +49,22 @@ class RobotSession:
 
 
 def discover_ports() -> list[str]:
-    candidates = list(Path("/dev").glob("cu.usb*")) + list(
-        Path("/dev").glob("tty.usb*")
+    try:
+        from serial.tools import list_ports
+    except ImportError:
+        candidates = list(Path("/dev").glob("cu.usb*")) + list(
+            Path("/dev").glob("tty.usb*")
+        )
+        return sorted({str(path) for path in candidates})
+    return sorted(
+        port.device
+        for port in list_ports.comports()
+        if any(
+            port.device.lower().endswith(marker)
+            or f"/{marker}" in port.device.lower()
+            for marker in ("cu.usb", "ttyacm", "ttyusb")
+        )
     )
-    return sorted({str(path) for path in candidates})
 
 
 def _read_saved_port(role: str) -> str | None:
