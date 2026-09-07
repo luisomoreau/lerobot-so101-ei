@@ -105,13 +105,20 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
   ```
 
   Record the port reported after disconnecting and reconnecting that arm. Repeat for the follower. On the VENTUNO Q, ports normally look like `/dev/ttyACM0` or `/dev/ttyUSB0`; on macOS, they normally look like `/dev/cu.usbmodem...` or `/dev/cu.usbserial...`.
-3. **Install the full LeRobot calibration CLI in a separate development environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. If the calibration files do not already exist, use a machine or environment with the pinned LeRobot CLI and the required native build prerequisites:
+3. **Prepare the calibration environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. The recommended setup is to calibrate the arms from your MacBook, where the calibration files will be created in the same paths shown below. You can then copy those two JSON files to the VENTUNO Q. Install the pinned LeRobot CLI on the MacBook:
 
   ```bash
   uv tool install 'lerobot[core_scripts,feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0'
   ```
 
-  Do not install this extra into the minimal VENTUNO Q booth environment unless its native dependencies have been prepared.
+  If calibration must run directly on the VENTUNO Q, install its native build prerequisites first. The package name may be `python3.12-dev` or `python3-dev` depending on the installed Debian image:
+
+  ```bash
+  sudo apt update
+  sudo apt install -y build-essential linux-libc-dev python3.12-dev
+  ```
+
+  If `python3.12-dev` is unavailable, use `python3-dev` or calibrate on the MacBook instead. The `Python.h` error from `evdev` means the selected Python interpreter does not have its development headers installed.
 4. **Calibrate the follower first.** With the follower connected at its recorded port and the arm secured, run:
 
   ```bash
