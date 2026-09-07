@@ -20,11 +20,11 @@ The app combines:
 Install the hardware-enabled tool from a Git repository:
 
 ```bash
-uv tool install 'lerobot-ei-demo[hardware] @ git+ssh://git@github.com/luisomoreau/lerobot-so101-ei.git'
+uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 lerobot-ei-demo
 ```
 
-The repository is private, so the install requires a GitHub SSH key with repository access. The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control, the Edge Impulse Linux inference runtime, and PyAudio for audio device support. The base install only includes the web application server and is intended for development or environments without connected hardware.
+The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control, the Edge Impulse Linux inference runtime, and PyAudio for audio device support. The base install only includes the web application server and is intended for development or environments without connected hardware.
 
 For a checkout during development:
 
