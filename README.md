@@ -28,6 +28,21 @@ lerobot-ei-demo
 
 The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control, the Edge Impulse Linux inference runtime, and PyAudio for audio device support. The base install only includes the web application server and is intended for development or environments without connected hardware.
 
+On the VENTUNO Q, install the native build tools and Linux input headers before installing the hardware extra. LeRobot's `core_scripts` dependency uses `pynput`, which builds the `evdev` package on the ARM64 Linux MPU:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential linux-libc-dev
+```
+
+If the matching kernel headers are available for the installed VENTUNO Q image, install them as well:
+
+```bash
+sudo apt install -y linux-headers-$(uname -r)
+```
+
+Then rerun the `uv tool install` command above. If the `linux-headers-$(uname -r)` package is not available, `linux-libc-dev` supplies the `linux/input.h` headers required by `evdev` on standard Debian-based images.
+
 For a checkout during development:
 
 ```bash
