@@ -52,7 +52,7 @@ function RobotScene({ sample }: { sample?: JointSample }) {
       const bounds = new THREE.Box3().setFromObject(viewer.robot);
       const center = bounds.getCenter(new THREE.Vector3());
       const size = bounds.getSize(new THREE.Vector3());
-      const distance = Math.max(size.x, size.y, size.z) * 2.2;
+      const distance = Math.max(size.x, size.y, size.z) * 0.6;
       viewer.camera.position.set(center.x + distance, center.y + distance, center.z + distance);
       viewer.controls.target.copy(center);
       viewer.controls.update();

@@ -1,46 +1,93 @@
 :root { font-family: "Avenir Next", "Trebuchet MS", sans-serif; color: #24302d; background: #f6f8f5; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: linear-gradient(135deg, #f6f8f5 0%, #eef7f2 100%); }
-main { max-width: 1240px; margin: 0 auto; padding: 2rem 5vw 4rem; }
+body { margin: 0; min-width: 320px; background: linear-gradient(135deg, #ffffff 0%, #edf5ff 52%, #c9ddf7 100%); }
+main { max-width: 1600px; margin: 0 auto; padding: 2rem 3vw 4rem; }
 header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: end; padding: 1rem 0 3rem; border-bottom: 1px solid #c9d8d1; }
 .eyebrow, h2, label, button, .status, .muted, figcaption, .device-mark { font-family: "Arial Narrow", "Avenir Next", sans-serif; }
+.brand-lockup { display: flex; align-items: center; gap: .8rem; min-height: 2.4rem; margin-bottom: 1.2rem; }
+.brand-lockup img { display: block; width: auto; height: 2rem; max-width: 13rem; object-fit: contain; }
+.brand-lockup .lerobot-logo { width: 2.4rem; height: 2.4rem; border-radius: 50%; }
+.brand-lockup span { color: #9aa9a2; font-size: 1.15rem; font-weight: 700; }
 .eyebrow { color: #d93b32; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-h1 { margin: .45rem 0 1rem; max-width: 800px; color: #24302d; font-family: Georgia, serif; font-size: clamp(3.2rem, 8vw, 7.4rem); line-height: .86; font-weight: 700; letter-spacing: -.04em; }
+h1 { margin: .45rem 0 1rem; max-width: 680px; color: #24302d; font-family: "Avenir Next", "Helvetica Neue", sans-serif; font-size: clamp(2.5rem, 5vw, 5rem); line-height: .92; font-weight: 800; letter-spacing: -.05em; }
 p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-serif; }
-.device-mark { align-self: start; min-width: 190px; padding: 1rem; border: 1px solid #b9d34c; border-radius: 14px; background: #e7f58b; color: #37452b; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.device-mark strong { display: block; margin-top: .25rem; font-size: 1.5rem; letter-spacing: -.03em; }
+.device-mark { align-self: start; width: min(360px, 100%); padding: 0; color: #63736d; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.device-mark img { display: block; width: 100%; height: 16rem; margin: 0 auto .15rem; object-fit: contain; }
+.device-mark strong { display: block; margin-top: .25rem; font-size: 1.1rem; letter-spacing: .02em; }
 .setup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
+.app-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(240px, .8fr) minmax(360px, 1fr); gap: 1.5rem; margin-top: 2rem; align-items: start; }
+.config-panel { position: sticky; top: 1rem; display: grid; min-width: 0; width: 100%; gap: 0; overflow: hidden; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
+.config-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 1rem; border-bottom: 1px solid #d9e4df; color: #40514b; font-size: .9rem; font-weight: 800; }
+.config-heading small { color: #55a76b; font-size: .6rem; letter-spacing: .08em; }
+.config-section { display: grid; gap: .8rem; padding: 1rem; border-bottom: 1px solid #d9e4df; }
+.config-section > * { min-width: 0; max-width: 100%; }
+.config-section:last-child { border-bottom: 0; }
+.config-section h2 { margin: 0; }
+.config-note { margin: 0; color: #80908a; font-size: .78rem; line-height: 1.4; }
+.calibration-status { display: grid; gap: .35rem; font-size: .7rem; font-weight: 700; }
+.calibration-status .ready { color: #55a76b; }
+.calibration-status .missing { color: #d93b32; }
+.camera-column, .telemetry-column { min-width: 0; }
+.camera-column > .camera-section:first-child { margin-top: 0; }
+.camera-config-list { display: grid; gap: .7rem; }
+.camera-config-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: .7rem; align-items: center; margin: 0; }
+.camera-config-row img { width: 74px; height: 56px; border-radius: 8px; object-fit: cover; background: #e3ece7; }
+.camera-config-row label { font-size: .62rem; }
+.camera-config-row input[type="text"] { min-height: 2.2rem; width: 100%; }
+.check-label { display: flex; grid-template-columns: none; align-items: center; gap: .35rem; }
+.camera-name-input { margin-top: .35rem; }
+.camera-index { display: block; margin-top: .25rem; color: #80908a; font-size: .65rem; }
+.toggle-row { display: flex; grid-template-columns: none; justify-content: space-between; align-items: center; }
+.toggle-row input { width: 1.1rem; height: 1.1rem; min-height: 1.1rem; accent-color: #df443b; box-shadow: none; }
 label { display: grid; gap: .45rem; color: #63736d; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-select, input, button { min-height: 2.8rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #24302d; padding: 0 .8rem; font: 1rem "Avenir Next", sans-serif; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }
-button { cursor: pointer; background: #df443b; color: #fff; border-color: #df443b; font-weight: 800; box-shadow: 0 5px 14px rgba(203, 57, 49, .18); }
-button:hover { background: #c8342d; border-color: #c8342d; }
+select, input, button { min-width: 0; max-width: 100%; min-height: 2.8rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #24302d; padding: 0 .8rem; font: 1rem "Avenir Next", sans-serif; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }
+button { cursor: pointer; background: #173b68; color: #fff; border-color: #173b68; font-weight: 800; box-shadow: 0 5px 14px rgba(23, 59, 104, .18); }
+button:hover { background: #10294a; border-color: #10294a; }
 button:disabled { cursor: not-allowed; opacity: .45; }
 .camera-section { margin-top: 2.5rem; }
 h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.cameras { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-.camera-card { overflow: hidden; margin: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
+.cameras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; width: 100%; }
+.camera-card { overflow: hidden; min-width: 0; margin: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .camera-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #e3ece7; }
+.saved-camera-list { display: grid; gap: .65rem; }
+.saved-camera { display: flex; align-items: center; gap: .65rem; min-height: 3rem; padding: .7rem .85rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #40514b; font-weight: 700; box-shadow: 0 4px 12px rgba(40, 73, 61, .05); }
+.saved-camera small { margin-left: auto; color: #55a76b; font-size: .65rem; font-weight: 800; text-transform: uppercase; }
+.camera-status-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #55a76b; }
 .camera-card figcaption { padding: .65rem .8rem 0; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+.camera-inference { display: grid; gap: .45rem; padding: .5rem .8rem .8rem; }
+.camera-inference select { width: 100%; min-width: 0; }
+.camera-inference option:disabled { color: #a8b4ae; }
+.camera-inference .check-label { font-size: .75rem; font-weight: 700; color: #40514b; }
+.camera-inference input[type="checkbox"]:disabled + * { color: #a8b4ae; }
+.inference-control { display: flex; align-items: center; gap: .55rem; }
+.inference-toggle { flex: 1; min-height: 2.2rem; padding: 0 .65rem; font-size: .75rem; }
+.inference-toggle[aria-pressed="true"] { background: #2d8b68; border-color: #2d8b68; }
+.inference-time { min-width: 4.2rem; color: #40514b; font: 700 .75rem "Arial Narrow", sans-serif; text-align: right; }
+.model-list { display: flex; flex-wrap: wrap; gap: .35rem; }
+.model-chip { padding: .25rem .55rem; border: 1px solid #c2d1ca; border-radius: 999px; background: #fff; font-size: .7rem; font-weight: 700; }
+.model-chip.unavailable { border-color: #dfe5e2; background: #f2f5f4; color: #a8b4ae; text-decoration: line-through; }
 .camera-row { display: grid; grid-template-columns: auto 1fr; align-items: center; padding: .7rem .8rem .8rem; }
 .camera-row input[type="text"] { width: 100%; min-width: 0; }
 .camera-setup button { margin-top: 1rem; }
 .muted { color: #80908a; font-size: .92rem; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 2rem; }
+.telemetry-column > .actions { margin-top: 0; margin-bottom: 1rem; }
 .status { display: inline-flex; align-items: center; gap: .55rem; padding: .7rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #63736d; font-size: .78rem; font-weight: 800; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }
 .dot { width: .6rem; height: .6rem; border-radius: 50%; background: #afbbb6; }
 .dot.active { background: #55a76b; }
-.telemetry-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; margin-top: 2.5rem; }
+.telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
 .telemetry-grid > div { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .telemetry-grid > div:last-child { border-color: #18365d; background: #10294a; }
 .panel-heading { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; color: #40514b; font-size: .9rem; font-weight: 800; }
 .telemetry-grid > div:last-child .panel-heading { color: #f4f7fb; }
 .panel-heading small { color: #d93b32; font-size: .62rem; letter-spacing: .08em; }
 .telemetry-grid > div:last-child .panel-heading small { color: #d9f04a; }
-.robot-scene { height: 360px; min-height: 280px; overflow: hidden; border: 1px solid #d3e0da; border-radius: 10px; background: #edf5f1; }
+.robot-scene { height: 280px; min-height: 240px; overflow: hidden; border: 1px solid #d3e0da; border-radius: 10px; background: #edf5f1; }
 .chart-wrap { overflow: hidden; }
 .chart-wrap svg { display: block; width: 100%; height: 210px; }
 .chart-axis { stroke: #c9d8d1; stroke-width: 1; stroke-dasharray: 4 5; }
 .legend { display: flex; flex-wrap: wrap; gap: .55rem; color: #80908a; font-size: .65rem; }
 .telemetry-grid > div:last-child .legend { color: #c5d3e3; }
-@media (max-width: 700px) { header { grid-template-columns: 1fr; } .setup { grid-template-columns: 1fr; } .device-mark { min-width: 0; } }
-@media (max-width: 800px) { .telemetry-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-panel { position: static; } }
+@media (max-width: 700px) { header { grid-template-columns: 1fr; } .setup { grid-template-columns: 1fr; } .device-mark { width: min(300px, 100%); justify-self: center; } .device-mark img { height: 12rem; } }
+@media (max-width: 480px) { main { padding-right: 1rem; padding-left: 1rem; } .camera-config-row { grid-template-columns: 64px minmax(0, 1fr); } .camera-config-row img { width: 64px; height: 48px; } .telemetry-grid { gap: .75rem; } .telemetry-grid > div { padding: .75rem; } }

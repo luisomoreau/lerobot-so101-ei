@@ -64,6 +64,14 @@ def _read_saved_port(role: str) -> str | None:
     return port or None
 
 
+def calibration_status() -> dict[str, bool]:
+    root = Path.home() / ".cache/huggingface/lerobot/calibration"
+    return {
+        "leader": (root / "teleoperators/so_leader/SO101.json").is_file(),
+        "follower": (root / "robots/so_follower/SO101.json").is_file(),
+    }
+
+
 def discover_cameras() -> list[dict[str, str]]:
     try:
         import cv2

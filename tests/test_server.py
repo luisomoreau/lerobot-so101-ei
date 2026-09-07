@@ -1,8 +1,18 @@
+from threading import Lock
+
+import numpy as np
 from fastapi.testclient import TestClient
 
 from lerobot_ei_demo import server
+from lerobot_ei_demo.edge_impulse import host_architecture, is_compatible
 from lerobot_ei_demo.server import app
 from lerobot_ei_demo.telemetry import TelemetryHub
+from lerobot_ei_demo.vision import (
+    RunnerState,
+    _map_detection,
+    _mask_unused_regions,
+    _result_items,
+)
 
 client = TestClient(app)
 
@@ -12,6 +22,13 @@ def test_health() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_calibration_status_has_both_roles() -> None:
+    response = client.get("/api/calibration/status")
+
+    assert response.status_code == 200
+    assert set(response.json()) == {"leader", "follower"}
 
 
 def test_telemetry_normalizes_lerobot_position_keys() -> None:
@@ -62,20 +79,168 @@ def test_session_setup_and_operation_lock() -> None:
     assert response.json()["operation"] == "idle"
 
 
-def test_inference_model_lifecycle() -> None:
+def test_inference_model_lifecycle(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
     response = client.get("/api/models")
     assert response.status_code == 200
     assert response.json() == []
 
     response = client.post(
-        "/api/inference/start",
-        json={"model_id": "missing.eim", "camera_id": "workspace"},
+        "/api/inference/assign",
+        json={"camera_id": "opencv:0", "model_id": "missing.eim", "enabled": True},
     )
     assert response.status_code == 404
 
     response = client.post("/api/inference/stop")
     assert response.status_code == 200
-    assert response.json()["status"] == "idle"
+    assert response.json()["cameras"] == []
+
+
+def test_inference_assignment_is_per_camera(tmp_path, monkeypatch) -> None:
+    model = tmp_path / f"model-{host_architecture()['architecture']}.eim"
+    model.write_bytes(b"stub")
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
+
+    for camera_id in ("opencv:0", "opencv:1"):
+        response = client.post(
+            "/api/inference/assign",
+            json={"camera_id": camera_id, "model_id": model.name, "enabled": False},
+        )
+        assert response.status_code == 200
+
+    cameras = {entry["camera_id"]: entry for entry in response.json()["cameras"]}
+    assert set(cameras) == {"opencv:0", "opencv:1"}
+    assert cameras["opencv:0"]["model_id"] == model.name
+
+    client.post("/api/inference/stop")
+
+
+def test_incompatible_models_cannot_be_enabled(tmp_path, monkeypatch) -> None:
+    incompatible = "linux" if host_architecture()["system"] == "darwin" else "macos"
+    model = tmp_path / f"model-{incompatible}-x86_64.eim"
+    model.write_bytes(b"stub")
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
+
+    listed = client.get("/api/models").json()
+    assert listed[0]["compatible"] is False
+
+    response = client.post(
+        "/api/inference/assign",
+        json={"camera_id": "opencv:0", "model_id": model.name, "enabled": True},
+    )
+    assert response.status_code == 409
+
+    client.post("/api/inference/stop")
+
+
+def test_host_architecture_is_reported() -> None:
+    response = client.get("/api/edge-impulse/architecture")
+
+    assert response.status_code == 200
+    assert response.json()["label"] == host_architecture()["label"]
+
+
+def test_edge_impulse_config_is_stored_locally(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server.app_config, "path", tmp_path / "config.json")
+
+    response = client.put(
+        "/api/edge-impulse/config",
+        json={"api_key": "ei_test_key", "project_id": 123},
+    )
+
+    assert response.status_code == 200
+    assert client.get("/api/edge-impulse/config").json() == {
+        "api_key": "ei_test_key",
+        "project_id": 123,
+    }
+    assert (tmp_path / "config.json").stat().st_mode & 0o777 == 0o600
+
+
+def test_compatibility_matches_the_running_host() -> None:
+    host = host_architecture()
+
+    assert is_compatible(f"{host['system']}-{host['architecture']}") is True
+
+
+def test_inference_results_map_boxes_and_centroids_to_camera_frames() -> None:
+    runner = RunnerState(
+        runner=None,
+        width=100,
+        height=100,
+        resize_mode="squash",
+        grayscale=False,
+        centroid_only=False,
+        lock=Lock(),
+    )
+
+    boxes = _result_items(
+        {
+            "result": {
+                "bounding_boxes": [
+                    {
+                        "label": "cup",
+                        "value": 0.9,
+                        "x": 10,
+                        "y": 20,
+                        "width": 50,
+                        "height": 30,
+                    }
+                ]
+            }
+        }
+    )
+    mapped_box = _map_detection(boxes[0], (200, 200, 3), runner)
+    assert mapped_box == {
+        "label": "cup",
+        "confidence": 0.9,
+        "x": 20,
+        "y": 40,
+        "width": 100,
+        "height": 60,
+    }
+
+    centroids = _result_items(
+        {
+            "result": {
+                "centroids": [{"label": "ball", "value": 0.8, "x": 0.5, "y": 0.25}]
+            }
+        }
+    )
+    mapped_centroid = _map_detection(centroids[0], (200, 200, 3), runner)
+    assert mapped_centroid["label"] == "ball"
+    assert (mapped_centroid["x"], mapped_centroid["y"]) == (100, 50)
+    assert mapped_centroid["width"] == mapped_centroid["height"] == 0
+
+    fomo_runner = RunnerState(
+        runner=None,
+        width=100,
+        height=100,
+        resize_mode="squash",
+        grayscale=False,
+        centroid_only=True,
+        lock=Lock(),
+    )
+    mapped_fomo = _map_detection(boxes[0], (200, 200, 3), fomo_runner)
+    assert (mapped_fomo["x"], mapped_fomo["y"]) == (70, 70)
+    assert mapped_fomo["width"] == mapped_fomo["height"] == 0
+
+
+def test_inference_masks_cropped_regions_for_fit_shortest() -> None:
+    runner = RunnerState(
+        runner=None,
+        width=100,
+        height=100,
+        resize_mode="fit-shortest",
+        grayscale=False,
+        centroid_only=False,
+        lock=Lock(),
+    )
+    frame = np.full((100, 200, 3), 255, dtype=np.uint8)
+
+    masked = _mask_unused_regions(frame, runner)
+
+    assert masked[50, 10, 0] < 255
+    assert masked[50, 100, 0] == 255
 
 
 def test_ports_only_include_usb_devices() -> None:
