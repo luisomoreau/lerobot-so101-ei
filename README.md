@@ -15,6 +15,8 @@ The app combines:
 - A left configuration rail for robot, camera, and Edge Impulse settings
 - Read-only leader/follower calibration readiness status
 
+![Demo Overview](docs/app-screenshot.png)
+
 ## Quick Start
 
 Install the hardware-enabled tool from a Git repository:
