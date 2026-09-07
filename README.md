@@ -76,7 +76,7 @@ The VENTUNO Q and client device must be on the same network, and any device fire
 The application currently targets one SO-101 leader and one SO-101 follower.
 
 1. Connect both arms by USB.
-2. Confirm the ports with LeRobot:
+2. Confirm the ports with the included port finder:
 
    ```bash
    uv run lerobot-find-port

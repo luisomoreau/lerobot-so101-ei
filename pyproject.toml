@@ -27,6 +27,7 @@ dev = [
 
 [project.scripts]
 lerobot-ei-demo = "lerobot_ei_demo.server:main"
+lerobot-find-port = "lerobot_ei_demo.port_finder:main"
 
 [tool.setuptools.packages.find]
 include = ["lerobot_ei_demo*"]
