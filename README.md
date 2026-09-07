@@ -26,7 +26,7 @@ uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/
 lerobot-ei-demo
 ```
 
-The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control, the Edge Impulse Linux inference runtime, and PyAudio for audio device support. The base install only includes the web application server and is intended for development or environments without connected hardware.
+The `[hardware]` extra installs the pinned LeRobot v0.6.0 stack for SO-101 control and the Edge Impulse Linux inference runtime. This demo uses image inference and does not require the SDK's optional PyAudio audio support. The base install only includes the web application server and is intended for development or environments without connected hardware.
 
 On the VENTUNO Q, install the native build tools and Linux input headers before installing the hardware extra. LeRobot's `core_scripts` dependency uses `pynput`, which builds the `evdev` package on the ARM64 Linux MPU:
 

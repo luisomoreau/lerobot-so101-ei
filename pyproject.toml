@@ -16,7 +16,6 @@ dependencies = [
 hardware = [
     "lerobot[core_scripts,feetech,training] @ git+https://github.com/huggingface/lerobot.git@v0.6.0",
     "edge-impulse-linux>=1.2.1",
-    "pyaudio>=0.2.14",
 ]
 dev = [
     "httpx>=0.27",
