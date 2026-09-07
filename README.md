@@ -105,12 +105,20 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
   ```
 
   Record the port reported after disconnecting and reconnecting that arm. Repeat for the follower. On the VENTUNO Q, ports normally look like `/dev/ttyACM0` or `/dev/ttyUSB0`; on macOS, they normally look like `/dev/cu.usbmodem...` or `/dev/cu.usbserial...`.
-3. **Prepare the calibration environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. The recommended setup is to calibrate the arms from your MacBook, where the calibration files will be created in the same paths shown below. You can then copy those two JSON files to the VENTUNO Q. Install the pinned LeRobot CLI on the MacBook:
-
-  Run the calibration CLI through `uvx` so it does not try to overwrite this app's own `lerobot-find-port` command:
+3. **Prepare the calibration environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. The recommended setup is a separate Python 3.12 virtual environment, following LeRobot's official uv installation method. Calibrate the arms from your MacBook when possible, then copy the two JSON files to the VENTUNO Q:
 
   ```bash
-  uvx --from 'lerobot[core_scripts,feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0' lerobot-calibrate
+  mkdir -p ~/lerobot-calibration
+  cd ~/lerobot-calibration
+  uv venv --python 3.12
+  source .venv/bin/activate
+  uv pip install 'lerobot[core_scripts,feetech]'
+  ```
+
+  On the VENTUNO Q, use the CPU PyTorch backend because it has a Qualcomm MPU rather than an NVIDIA GPU:
+
+  ```bash
+  uv pip install --torch-backend cpu 'lerobot[core_scripts,feetech]'
   ```
 
   If calibration must run directly on the VENTUNO Q, install its native build prerequisites first. The package name may be `python3.12-dev` or `python3-dev` depending on the installed Debian image:
@@ -124,14 +132,14 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
 4. **Calibrate the follower first.** With the follower connected at its recorded port and the arm secured, run:
 
   ```bash
-  uvx --from 'lerobot[core_scripts,feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0' lerobot-calibrate --robot.type=so101_follower --robot.port=/dev/ttyACM0 --robot.id=SO101
+  lerobot-calibrate --robot.type=so101_follower --robot.port=/dev/ttyACM0 --robot.id=SO101
   ```
 
   Replace the port with the recorded follower port. Follow the interactive prompts, move only as instructed, and keep people and objects clear of the arm.
 5. **Calibrate the leader.** Disconnect the follower, connect the leader at its recorded port, and run:
 
   ```bash
-  uvx --from 'lerobot[core_scripts,feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0' lerobot-calibrate --teleop.type=so101_leader --teleop.port=/dev/ttyACM1 --teleop.id=SO101
+  lerobot-calibrate --teleop.type=so101_leader --teleop.port=/dev/ttyACM1 --teleop.id=SO101
   ```
 
   Replace the port with the recorded leader port. The calibration process disables torque and requires operator movement; never run it unattended.
