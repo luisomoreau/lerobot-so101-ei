@@ -93,6 +93,52 @@ The application currently targets one SO-101 leader and one SO-101 follower.
 
 The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Fresh calibration still needs a dedicated guided flow before it should be enabled for booth use.
 
+### Add a new SO-101 pair
+
+Use this procedure when replacing or adding a fresh leader/follower pair:
+
+1. **Secure the hardware.** Put the follower in a clear workspace, keep the emergency stop accessible, and leave both arms unpowered until the USB connections are ready. Treat the arm connected as the leader and the arm connected as the follower consistently throughout setup.
+2. **Connect one arm at a time.** Connect the leader by USB and run:
+
+  ```bash
+  uv run lerobot-find-port
+  ```
+
+  Record the port reported after disconnecting and reconnecting that arm. Repeat for the follower. On the VENTUNO Q, ports normally look like `/dev/ttyACM0` or `/dev/ttyUSB0`; on macOS, they normally look like `/dev/cu.usbmodem...` or `/dev/cu.usbserial...`.
+3. **Install the full LeRobot calibration CLI in a separate development environment.** The booth package intentionally omits LeRobot's `core_scripts` extra because it pulls in keyboard and native `evdev` dependencies. If the calibration files do not already exist, use a machine or environment with the pinned LeRobot CLI and the required native build prerequisites:
+
+  ```bash
+  uv tool install 'lerobot[core_scripts,feetech] @ git+https://github.com/huggingface/lerobot.git@v0.6.0'
+  ```
+
+  Do not install this extra into the minimal VENTUNO Q booth environment unless its native dependencies have been prepared.
+4. **Calibrate the follower first.** With the follower connected at its recorded port and the arm secured, run:
+
+  ```bash
+  lerobot-calibrate --robot.type=so101_follower --robot.port=/dev/ttyACM0 --robot.id=SO101
+  ```
+
+  Replace the port with the recorded follower port. Follow the interactive prompts, move only as instructed, and keep people and objects clear of the arm.
+5. **Calibrate the leader.** Disconnect the follower, connect the leader at its recorded port, and run:
+
+  ```bash
+  lerobot-calibrate --teleop.type=so101_leader --teleop.port=/dev/ttyACM1 --teleop.id=SO101
+  ```
+
+  Replace the port with the recorded leader port. The calibration process disables torque and requires operator movement; never run it unattended.
+6. **Verify the calibration files.** Both roles should have a `SO101.json` file under:
+
+  ```text
+  ~/.cache/huggingface/lerobot/calibration/robots/so_follower/SO101.json
+  ~/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/SO101.json
+  ```
+
+  On a VENTUNO Q, these files must be present on the VENTUNO Q itself. Copying only the application does not copy calibration data.
+7. **Start the booth app and select the pair.** Start `lerobot-ei-demo`, choose the recorded leader and follower ports in **Robot setup**, and confirm both status indicators say **calibrated**. The app does not write the port files automatically; keep the recorded ports available if device enumeration changes after reboot.
+8. **Test without motion first.** Confirm both ports and calibration indicators, clear the follower workspace, and make sure the emergency stop works. Press **Start teleoperation** only after these checks, then move the leader slowly and stop immediately if the follower behaves unexpectedly.
+
+If either calibration status remains **needs calibration**, do not start teleoperation. Recheck the role, `SO101` ID, calibration path, and selected USB port.
+
 ## Cameras
 
 The setup page detects OpenCV camera indices and allows additional indices to be entered manually.
