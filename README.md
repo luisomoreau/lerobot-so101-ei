@@ -22,25 +22,34 @@ The app combines:
 Install the hardware-enabled tool from a Git repository:
 
 ```bash
-uv tool install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install lerobot
+uv pip install 'lerobot[feetech]'
+uv pip install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 lerobot-ei-demo
 ```
 
-The `[hardware]` extra installs LeRobot's `feetech` extra for SO-101 control and the Edge Impulse Linux inference runtime. The optional `[calibration]` extra adds LeRobot's `core_scripts` CLI. The base install only includes the web application server and is intended for development or environments without connected hardware.
+LeRobot is intentionally installed separately from this app. `uv pip install lerobot` is the default LeRobot installation; add `lerobot[feetech]` for SO-101 motor support. Use the official [LeRobot installation guide](https://huggingface.co/docs/lerobot/en/installation) for platform-specific requirements, calibration, and optional CLI workflows. The app's `[hardware]` extra contains only the Edge Impulse Linux runtime. The base app install contains neither LeRobot nor Edge Impulse.
 
 On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does not download NVIDIA CUDA packages. Edge Impulse `.eim` deployments remain the app's accelerated inference path; PyTorch is used by the LeRobot control stack and does not target the VENTUNO Q NPU:
 
 ```bash
 sudo apt update
 sudo apt install -y build-essential
-uv tool install --torch-backend cpu 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install --torch-backend cpu 'lerobot[feetech]'
+uv pip install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+lerobot-ei-demo
 ```
 
-Do not add the `[calibration]` extra on the VENTUNO Q. LeRobot currently requires `torchcodec<0.12` for `core_scripts`, but those versions do not publish a compatible ARM64 wheel. The app's web setup discovers the USB ports without that extra. Use the calibration workflow below on a MacBook instead.
+The VENTUNO Q command uses CPU-only PyTorch because its Qualcomm MPU is not an NVIDIA CUDA device. For full LeRobot calibration and CLI setup, follow the [official LeRobot guide](https://huggingface.co/docs/lerobot/en/installation); the app does not wrap or replace LeRobot's installation process.
 
-For a checkout during development:
+For a checkout during development, install LeRobot separately in the active environment:
 
 ```bash
+uv pip install 'lerobot[feetech]'
 uv sync --extra hardware --extra dev --native-tls
 uv run lerobot-ei-demo --port 8000
 ```
@@ -48,6 +57,7 @@ uv run lerobot-ei-demo --port 8000
 On the VENTUNO Q, use the official LeRobot CPU backend while installing the checkout:
 
 ```bash
+uv pip install --torch-backend cpu 'lerobot[feetech]'
 uv pip install --torch-backend cpu -e '.[hardware,dev]'
 uv run lerobot-ei-demo --port 8000
 ```
@@ -93,7 +103,7 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
 1. **Secure the hardware.** Put the follower in a clear workspace, keep the emergency stop accessible, and leave both arms unpowered until the USB connections are ready. Treat the arm connected as the leader and the arm connected as the follower consistently throughout setup.
 2. **Connect one arm at a time.** Connect the leader by USB and note its detected port in the app's **Robot setup** section. Repeat for the follower. On the VENTUNO Q, ports normally look like `/dev/ttyACM0` or `/dev/ttyUSB0`; on macOS, they normally look like `/dev/cu.usbmodem...` or `/dev/cu.usbserial...`.
 
-3. **Prepare the calibration environment on a MacBook.** The app's `[hardware]` extra intentionally omits LeRobot's `core_scripts` extra because its current `torchcodec` dependency has no compatible ARM64 wheel. Use a separate Python 3.12 virtual environment on the MacBook, following LeRobot's official uv installation method, then copy the two JSON files to the VENTUNO Q:
+3. **Install and calibrate LeRobot separately.** Follow the [official LeRobot installation guide](https://huggingface.co/docs/lerobot/en/installation) in the same active uv environment. For the standard calibration CLI, install the relevant LeRobot extras there:
 
   ```bash
   mkdir -p ~/lerobot-calibration
@@ -103,7 +113,7 @@ Use this procedure when replacing or adding a fresh leader/follower pair:
   uv pip install 'lerobot[core_scripts,feetech]'
   ```
 
-  The resulting calibration files are portable JSON files. Copy them to the matching `~/.cache/huggingface/lerobot/calibration/` paths on the VENTUNO Q. Direct calibration on the VENTUNO Q is currently blocked by the upstream ARM64 `torchcodec` wheel gap, even if `python3-dev` and `evdev` build prerequisites are installed.
+  The resulting calibration files are portable JSON files. Copy them to the matching `~/.cache/huggingface/lerobot/calibration/` paths on the VENTUNO Q when calibration is performed on another machine. Consult the official guide for current ARM64 and platform-specific availability before attempting full `core_scripts` installation on the VENTUNO Q.
 4. **Calibrate the follower first.** With the follower connected at its recorded port and the arm secured, run:
 
   ```bash

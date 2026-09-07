@@ -14,11 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hardware = [
-    "lerobot[feetech]>=0.6.0",
     "edge-impulse-linux>=1.2.1",
-]
-calibration = [
-    "lerobot[core_scripts,feetech]>=0.6.0",
 ]
 dev = [
     "httpx>=0.27",
