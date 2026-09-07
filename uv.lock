@@ -950,6 +950,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+calibration = [
+    { name = "lerobot", extra = ["core-scripts", "feetech"] },
+]
 dev = [
     { name = "httpx" },
     { name = "pytest" },
@@ -957,7 +960,7 @@ dev = [
 ]
 hardware = [
     { name = "edge-impulse-linux" },
-    { name = "lerobot", extra = ["core-scripts", "feetech"] },
+    { name = "lerobot", extra = ["feetech"] },
 ]
 
 [package.metadata]
@@ -965,12 +968,13 @@ requires-dist = [
     { name = "edge-impulse-linux", marker = "extra == 'hardware'", specifier = ">=1.2.1" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
-    { name = "lerobot", extras = ["core-scripts", "feetech"], marker = "extra == 'hardware'", specifier = ">=0.6.0" },
+    { name = "lerobot", extras = ["core-scripts", "feetech"], marker = "extra == 'calibration'", specifier = ">=0.6.0" },
+    { name = "lerobot", extras = ["feetech"], marker = "extra == 'hardware'", specifier = ">=0.6.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
-provides-extras = ["hardware", "dev"]
+provides-extras = ["hardware", "calibration", "dev"]
 
 [[package]]
 name = "markupsafe"
