@@ -39,6 +39,14 @@ uv run lerobot-ei-demo --port 8001
 
 The `--native-tls` option may be needed on managed machines whose Python certificate store does not trust package indexes.
 
+By default, the server listens on all network interfaces (`0.0.0.0`), which allows another computer on the same LAN to reach the app. On the VENTUNO Q, find its IP address with `hostname -I` or `ip addr`, then open `http://<VENTUNO_Q_IP>:8000` from the other computer. You can bind to a specific interface when needed:
+
+```bash
+uv run lerobot-ei-demo --host 0.0.0.0 --port 8000
+```
+
+The VENTUNO Q and client device must be on the same network, and any device firewall must allow inbound TCP traffic on the selected port. Binding to `0.0.0.0` exposes the local control UI to that network, so use a trusted LAN or specify a restricted host/firewall rule.
+
 ## Hardware Setup
 
 The application currently targets one SO-101 leader and one SO-101 follower.
