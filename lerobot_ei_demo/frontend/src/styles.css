@@ -93,6 +93,17 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .setup-instructions p { margin: 0; font-size: .85rem; }
 .setup-instructions code { display: block; overflow-x: auto; padding: .55rem .7rem; border-radius: 7px; background: #10294a; color: #f4f7fb; font: .72rem/1.4 ui-monospace, SFMono-Regular, monospace; white-space: nowrap; }
 .setup-instructions a { color: #173b68; font-weight: 800; }
+.calibration-panel { position: fixed; z-index: 30; top: 4vh; right: 4vw; bottom: 4vh; left: 4vw; max-width: none; margin: auto; }
+.calibration-phase { color: #d93b32; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+.calibration-actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .8rem; }
+.calibration-actions button { min-height: 2.35rem; font-size: .75rem; }
+.calibration-message { margin: .8rem 0 0; font-size: .82rem; }
+.calibration-error { margin: .8rem 0 0; color: #d93b32; font-size: .8rem; font-weight: 800; }
+.encoder-table { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
+.encoder-table span { display: grid; gap: .15rem; padding: .65rem; border: 1px solid #c2d1ca; border-radius: 8px; background: #f6f8f5; }
+.encoder-table b { color: #63736d; font-size: .65rem; text-transform: uppercase; }
+.encoder-table strong { color: #173b68; font: 800 1.2rem ui-monospace, SFMono-Regular, monospace; }
+.encoder-table small { color: #80908a; font-size: .65rem; }
 .telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
 .telemetry-grid > div { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .telemetry-grid > div:last-child { border-color: #18365d; background: #10294a; }
@@ -110,3 +121,4 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 @media (max-width: 700px) { header { grid-template-columns: 1fr; } .setup { grid-template-columns: 1fr; } .device-mark { width: min(300px, 100%); justify-self: center; } .device-mark img { height: 12rem; } }
 @media (max-width: 480px) { main { padding-right: 1rem; padding-left: 1rem; } .camera-config-row { grid-template-columns: 64px minmax(0, 1fr); } .camera-config-row img { width: 64px; height: 48px; } .telemetry-grid { gap: .75rem; } .telemetry-grid > div { padding: .75rem; } }
 @media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .calibration-panel { top: 1rem; right: 1rem; bottom: 1rem; left: 1rem; } .encoder-table { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

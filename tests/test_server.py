@@ -32,6 +32,13 @@ def test_calibration_status_has_both_roles() -> None:
     assert set(response.json()) == {"leader", "follower"}
 
 
+def test_calibration_session_is_idle_without_hardware() -> None:
+    response = client.get("/api/calibration/session")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "idle"
+
+
 def test_import_calibration_writes_official_role_path(
     monkeypatch, tmp_path: Path
 ) -> None:

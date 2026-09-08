@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from lerobot_ei_demo import edge_impulse
+from lerobot_ei_demo.calibration import CalibrationService
 from lerobot_ei_demo.camera import CameraStreamRegistry, camera_index, mjpeg_stream
 from lerobot_ei_demo.camera_registry import CameraRegistry
 from lerobot_ei_demo.config import AppConfig
@@ -33,6 +34,7 @@ controller = LeRobotController(telemetry.publish)
 camera_registry = CameraRegistry()
 camera_streams = CameraStreamRegistry()
 app_config = AppConfig()
+calibration_service = CalibrationService()
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
@@ -83,6 +85,11 @@ class CameraConfiguration(BaseModel):
 class CalibrationImport(BaseModel):
     role: str
     contents: str
+
+
+class CalibrationStart(BaseModel):
+    role: str
+    port: str = Field(min_length=1)
 
 
 @app.get("/api/health")
@@ -168,6 +175,40 @@ def import_calibration_file(payload: CalibrationImport) -> dict[str, str | bool]
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {**imported, "imported": True}
+
+
+@app.get("/api/calibration/session")
+def calibration_session() -> dict:
+    return calibration_service.snapshot()
+
+
+@app.post("/api/calibration/start")
+def start_calibration(payload: CalibrationStart) -> dict:
+    try:
+        return calibration_service.start(payload.role, payload.port)
+    except (ImportError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/center")
+def capture_calibration_center() -> dict:
+    try:
+        return calibration_service.capture_center()
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/finish")
+def finish_calibration() -> dict:
+    try:
+        return calibration_service.finish()
+    except (ImportError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/stop")
+def stop_calibration() -> dict:
+    return calibration_service.stop()
 
 
 @app.post("/api/session/select")
