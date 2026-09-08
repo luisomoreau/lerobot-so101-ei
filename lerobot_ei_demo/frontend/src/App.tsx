@@ -57,6 +57,14 @@ function App() {
   useEffect(() => { loadSetup().catch((error: Error) => setStatus(error.message)); }, []);
 
   useEffect(() => {
+    if (!robotSetupOpen) return;
+    const refresh = () => refreshPorts().catch(() => undefined);
+    refresh();
+    const interval = window.setInterval(refresh, 1000);
+    return () => window.clearInterval(interval);
+  }, [robotSetupOpen]);
+
+  useEffect(() => {
     const refreshInference = () => {
       request<InferenceStatus>("/api/inference/status")
         .then(setInference)
@@ -152,15 +160,20 @@ function App() {
     setPortFinderMessage("Disconnect one arm, then scan again.");
   }
 
+  async function refreshPorts() {
+    const currentPorts = await request<string[]>("/api/ports");
+    setPorts(currentPorts);
+    setSession((current) => current ? {
+      ...current,
+      leader_port: currentPorts.includes(current.leader_port ?? "") ? current.leader_port : null,
+      follower_port: currentPorts.includes(current.follower_port ?? "") ? current.follower_port : null,
+    } : current);
+  }
+
   async function scanPortChange() {
     try {
+      await refreshPorts();
       const currentPorts = await request<string[]>("/api/ports");
-      setPorts(currentPorts);
-      setSession((current) => current ? {
-        ...current,
-        leader_port: currentPorts.includes(current.leader_port ?? "") ? current.leader_port : null,
-        follower_port: currentPorts.includes(current.follower_port ?? "") ? current.follower_port : null,
-      } : current);
       if (!portBaseline) {
         setPortBaseline(currentPorts);
         setPortFinderMessage("Disconnect one arm, then scan again.");
