@@ -75,6 +75,19 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .status { display: inline-flex; align-items: center; gap: .55rem; padding: .7rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #63736d; font-size: .78rem; font-weight: 800; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }
 .dot { width: .6rem; height: .6rem; border-radius: 50%; background: #afbbb6; }
 .dot.active { background: #55a76b; }
+.modal-backdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(16, 41, 74, .42); }
+.setup-modal { width: min(760px, 100%); max-height: min(720px, 92vh); overflow: auto; padding: 1.4rem; border: 1px solid #c2d1ca; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(16, 41, 74, .28); }
+.modal-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: .8rem; }
+.modal-heading h2 { margin: .2rem 0 0; font-size: 1.15rem; letter-spacing: .04em; }
+.modal-heading small { color: #55a76b; font-size: .62rem; font-weight: 800; letter-spacing: .12em; }
+.modal-close { min-height: 2.2rem; padding: 0 .7rem; font-size: .75rem; }
+.setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.setup-grid input[type="file"] { min-height: 3.2rem; padding-top: .55rem; font-size: .75rem; }
+.setup-status { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 1rem; }
+.setup-instructions { display: grid; gap: .55rem; margin-top: 1rem; padding: 1rem; border-left: 4px solid #d93b32; background: #f6f8f5; color: #63736d; font-size: .82rem; line-height: 1.45; }
+.setup-instructions p { margin: 0; font-size: .85rem; }
+.setup-instructions code { display: block; overflow-x: auto; padding: .55rem .7rem; border-radius: 7px; background: #10294a; color: #f4f7fb; font: .72rem/1.4 ui-monospace, SFMono-Regular, monospace; white-space: nowrap; }
+.setup-instructions a { color: #173b68; font-weight: 800; }
 .telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
 .telemetry-grid > div { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .telemetry-grid > div:last-child { border-color: #18365d; background: #10294a; }
@@ -91,3 +104,4 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 @media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-panel { position: static; } }
 @media (max-width: 700px) { header { grid-template-columns: 1fr; } .setup { grid-template-columns: 1fr; } .device-mark { width: min(300px, 100%); justify-self: center; } .device-mark img { height: 12rem; } }
 @media (max-width: 480px) { main { padding-right: 1rem; padding-left: 1rem; } .camera-config-row { grid-template-columns: 64px minmax(0, 1fr); } .camera-config-row img { width: 64px; height: 48px; } .telemetry-grid { gap: .75rem; } .telemetry-grid > div { padding: .75rem; } }
+@media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }

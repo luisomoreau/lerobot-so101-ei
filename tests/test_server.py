@@ -1,3 +1,4 @@
+from pathlib import Path
 from threading import Lock
 
 import numpy as np
@@ -29,6 +30,37 @@ def test_calibration_status_has_both_roles() -> None:
 
     assert response.status_code == 200
     assert set(response.json()) == {"leader", "follower"}
+
+
+def test_import_calibration_writes_official_role_path(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+    response = client.post(
+        "/api/calibration/import",
+        json={"role": "leader", "contents": '{"motors": {"shoulder_pan": 1}}'},
+    )
+
+    target = (
+        tmp_path
+        / ".cache/huggingface/lerobot/calibration/teleoperators/so_leader/SO101.json"
+    )
+    assert response.status_code == 200
+    assert target.exists()
+    assert target.read_text(encoding="utf-8").startswith('{\n  "motors"')
+    assert target.stat().st_mode & 0o777 == 0o600
+
+
+def test_import_calibration_rejects_invalid_json(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+    response = client.post(
+        "/api/calibration/import",
+        json={"role": "follower", "contents": "not-json"},
+    )
+
+    assert response.status_code == 422
 
 
 def test_telemetry_normalizes_lerobot_position_keys() -> None:

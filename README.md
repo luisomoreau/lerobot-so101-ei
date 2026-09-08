@@ -96,6 +96,8 @@ The application currently targets one SO-101 leader and one SO-101 follower.
 
 The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Fresh calibration still needs a dedicated guided flow before it should be enabled for booth use.
 
+Use **Set up robot pair** in the Robot setup panel to select and persist the leader and follower ports, import a calibration JSON for either role, and open the LeRobot calibration commands. Port assignments are stored in LeRobot's official `~/.cache/huggingface/lerobot/ports/` directory. Imported files are validated and stored at the official role paths under `~/.cache/huggingface/lerobot/calibration/`.
+
 ### Add a new SO-101 pair
 
 Use this procedure when replacing or adding a fresh leader/follower pair:

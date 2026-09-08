@@ -11,7 +11,12 @@ from lerobot_ei_demo.camera import CameraStreamRegistry, camera_index, mjpeg_str
 from lerobot_ei_demo.camera_registry import CameraRegistry
 from lerobot_ei_demo.config import AppConfig
 from lerobot_ei_demo.hardware import LeRobotController
-from lerobot_ei_demo.session import RobotSession, calibration_status, discover_ports
+from lerobot_ei_demo.session import (
+    RobotSession,
+    calibration_status,
+    discover_ports,
+    import_calibration,
+)
 from lerobot_ei_demo.telemetry import TelemetryHub
 from lerobot_ei_demo.vision import InferenceService, ModelCatalog
 
@@ -75,6 +80,11 @@ class CameraConfiguration(BaseModel):
     selected: bool = False
 
 
+class CalibrationImport(BaseModel):
+    role: str
+    contents: str
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {
@@ -116,7 +126,7 @@ def configure_cameras(
         camera_streams.close(previews_only=True)
         camera_streams.close(selected_ids=selected_ids)
         return configured
-    except ValueError as error:
+    except (TypeError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
@@ -149,6 +159,15 @@ def get_session() -> dict[str, str | None]:
 @app.get("/api/calibration/status")
 def get_calibration_status() -> dict[str, bool]:
     return calibration_status()
+
+
+@app.post("/api/calibration/import")
+def import_calibration_file(payload: CalibrationImport) -> dict[str, str | bool]:
+    try:
+        imported = import_calibration(payload.role, payload.contents)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {**imported, "imported": True}
 
 
 @app.post("/api/session/select")
