@@ -17,6 +17,7 @@ class CalibrationState:
 class CalibrationService:
     def __init__(self) -> None:
         self._lock = Lock()
+        self._bus_lock = Lock()
         self._stop = Event()
         self._thread: Thread | None = None
         self._device = None
@@ -67,7 +68,8 @@ class CalibrationService:
             device = self._device
             if device is None:
                 raise RuntimeError("Calibration device is still connecting")
-        homings = device.bus.set_half_turn_homings()
+        with self._bus_lock:
+            homings = device.bus.set_half_turn_homings()
         with self._lock:
             self._homings = {name: int(value) for name, value in homings.items()}
             self._state.phase = "range"
@@ -95,9 +97,10 @@ class CalibrationService:
                 range_min=mins.get(name, 0),
                 range_max=maxes.get(name, 4095),
             )
-        device.bus.write_calibration(calibration)
-        device.calibration = calibration
-        device._save_calibration()
+        with self._bus_lock:
+            device.bus.write_calibration(calibration)
+            device.calibration = calibration
+            device._save_calibration()
         self.stop()
         with self._lock:
             self._state.status = "complete"
@@ -169,12 +172,10 @@ class CalibrationService:
             if device is not None:
                 device.bus.disconnect()
 
-    @staticmethod
-    def _read_positions(device) -> dict[str, int]:
-        return {
-            name: int(value)
-            for name, value in device.bus.sync_read("Present_Position", normalize=False).items()
-        }
+    def _read_positions(self, device) -> dict[str, int]:
+        with self._bus_lock:
+            values = device.bus.sync_read("Present_Position", normalize=False)
+        return {name: int(value) for name, value in values.items()}
 
     def _require_phase(self, phase: str) -> None:
         if self._state.status != "running" or self._state.phase != phase:
