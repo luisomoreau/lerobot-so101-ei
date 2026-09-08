@@ -7,11 +7,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from lerobot_ei_demo import edge_impulse
+from lerobot_ei_demo.calibration import CalibrationService
 from lerobot_ei_demo.camera import CameraStreamRegistry, camera_index, mjpeg_stream
 from lerobot_ei_demo.camera_registry import CameraRegistry
 from lerobot_ei_demo.config import AppConfig
 from lerobot_ei_demo.hardware import LeRobotController
-from lerobot_ei_demo.session import RobotSession, calibration_status, discover_ports
+from lerobot_ei_demo.session import (
+    RobotSession,
+    calibration_status,
+    discover_ports,
+    import_calibration,
+    list_robot_profiles,
+    save_robot_profile,
+)
 from lerobot_ei_demo.telemetry import TelemetryHub
 from lerobot_ei_demo.vision import InferenceService, ModelCatalog
 
@@ -28,6 +36,20 @@ controller = LeRobotController(telemetry.publish)
 camera_registry = CameraRegistry()
 camera_streams = CameraStreamRegistry()
 app_config = AppConfig()
+calibration_service = CalibrationService()
+_default_profiles = list_robot_profiles()
+if _default_profiles and _default_profiles[0].get("cameras"):
+    camera_registry.configure(
+        [
+            {
+                "name": camera.get("name", camera.get("id", "Camera")),
+                "index": int(camera["camera_index"]),
+                "selected": True,
+            }
+            for camera in _default_profiles[0]["cameras"]
+            if "camera_index" in camera
+        ]
+    )
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
@@ -75,6 +97,23 @@ class CameraConfiguration(BaseModel):
     selected: bool = False
 
 
+class CalibrationImport(BaseModel):
+    role: str
+    contents: str
+
+
+class CalibrationStart(BaseModel):
+    role: str
+    port: str = Field(min_length=1)
+
+
+class RobotProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    leader_port: str = Field(min_length=1)
+    follower_port: str = Field(min_length=1)
+    cameras: list[dict] = []
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {
@@ -86,7 +125,53 @@ def health() -> dict[str, str]:
 
 @app.get("/api/robots")
 def robots() -> list[dict[str, str]]:
-    return [{"id": "SO-101", "name": "SO-101 leader/follower"}]
+    return [
+        {"id": profile["name"], "name": profile["name"]}
+        for profile in list_robot_profiles()
+    ] or [{"id": "SO-101", "name": "SO-101 leader/follower"}]
+
+
+@app.get("/api/robot-profiles")
+def robot_profiles() -> list[dict]:
+    return list_robot_profiles()
+
+
+@app.post("/api/robot-profiles")
+def create_robot_profile(payload: RobotProfileRequest) -> dict:
+    try:
+        return save_robot_profile(payload.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+class RobotProfileSelection(BaseModel):
+    name: str
+
+
+@app.post("/api/robot-profiles/select")
+def select_robot_profile(selection: RobotProfileSelection) -> dict:
+    profile = next(
+        (item for item in list_robot_profiles() if item["name"] == selection.name),
+        None,
+    )
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Robot profile not found")
+    session.select(
+        leader_port=profile["leader_port"], follower_port=profile["follower_port"]
+    )
+    configured = []
+    for camera in profile.get("cameras", []):
+        if "camera_index" in camera:
+            configured.append(
+                {
+                    "name": camera.get("name", camera.get("id", "Camera")),
+                    "index": int(camera["camera_index"]),
+                    "selected": True,
+                }
+            )
+    if configured:
+        camera_registry.configure(configured)
+    return {"profile": profile, "session": session.snapshot(), "cameras": camera_registry.all()}
 
 
 @app.get("/api/ports")
@@ -116,7 +201,7 @@ def configure_cameras(
         camera_streams.close(previews_only=True)
         camera_streams.close(selected_ids=selected_ids)
         return configured
-    except ValueError as error:
+    except (TypeError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
@@ -151,6 +236,68 @@ def get_calibration_status() -> dict[str, bool]:
     return calibration_status()
 
 
+@app.post("/api/calibration/import")
+def import_calibration_file(payload: CalibrationImport) -> dict[str, str | bool]:
+    try:
+        imported = import_calibration(payload.role, payload.contents)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {**imported, "imported": True}
+
+
+@app.get("/api/calibration/download/{role}")
+def download_calibration(role: str) -> FileResponse:
+    relative_path = (
+        "teleoperators/so_leader/SO101.json"
+        if role == "leader"
+        else "robots/so_follower/SO101.json"
+        if role == "follower"
+        else None
+    )
+    if relative_path is None:
+        raise HTTPException(status_code=422, detail="Calibration role must be leader or follower")
+    path = Path.home() / ".cache/huggingface/lerobot/calibration" / relative_path
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Calibration file is not present")
+    return FileResponse(path, filename=f"SO101-{role}.json", media_type="application/json")
+
+
+@app.get("/api/calibration/session")
+def calibration_session() -> dict:
+    return calibration_service.snapshot()
+
+
+@app.post("/api/calibration/start")
+def start_calibration(payload: CalibrationStart) -> dict:
+    try:
+        if controller.active or session.snapshot()["operation"] != "idle":
+            raise RuntimeError("Stop teleoperation before calibrating")
+        return calibration_service.start(payload.role, payload.port)
+    except (ImportError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/center")
+def capture_calibration_center() -> dict:
+    try:
+        return calibration_service.capture_center()
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/finish")
+def finish_calibration() -> dict:
+    try:
+        return calibration_service.finish()
+    except (ImportError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/calibration/stop")
+def stop_calibration() -> dict:
+    return calibration_service.stop()
+
+
 @app.post("/api/session/select")
 def select_session(selection: SessionSelection) -> dict[str, str | None]:
     return session.select(**selection.model_dump())
@@ -159,6 +306,8 @@ def select_session(selection: SessionSelection) -> dict[str, str | None]:
 @app.post("/api/teleoperation/start")
 def start_teleoperation() -> dict[str, str | None]:
     try:
+        if calibration_service.active:
+            raise RuntimeError("Stop calibration before starting teleoperation")
         state = session.start("teleoperation")
         if (
             state["leader_port"]

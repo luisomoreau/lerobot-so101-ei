@@ -94,7 +94,9 @@ The application currently targets one SO-101 leader and one SO-101 follower.
 4. Start the app and verify the saved leader and follower ports in the setup controls.
 5. Start teleoperation only after the follower workspace is clear and the operator has access to the physical emergency stop.
 
-The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Fresh calibration still needs a dedicated guided flow before it should be enabled for booth use.
+The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Open **Set up robot pair** to run a guarded calibration session directly in the UI: select a role, capture center, move through the safe range while watching live encoder values, then save or stop without saving.
+
+Use **Set up robot pair** in the Robot setup panel to select and persist the leader and follower ports, import a calibration JSON for either role, and open the LeRobot calibration commands. Port assignments are stored in LeRobot's official `~/.cache/huggingface/lerobot/ports/` directory. Imported files are validated and stored at the official role paths under `~/.cache/huggingface/lerobot/calibration/`.
 
 ### Add a new SO-101 pair
 
@@ -269,7 +271,7 @@ The viewer automatically frames the full arm at a close initial zoom; users can 
 ## Current Boundaries
 
 - SO-101 is the only robot type implemented.
-- Calibration is not yet exposed as a guided web workflow.
+- Calibration is exposed as an operator-controlled web workflow with live encoder values; it requires LeRobot and direct serial access on the device.
 - Edge Impulse project connection, architecture-filtered model downloads, per-camera model assignment, and live `.eim` detection overlays are implemented. Classification-only models do not currently render a score panel; the overlay path is focused on bounding-box and centroid outputs.
 - Teleoperation and telemetry are implemented; disconnect recovery and operator-facing fault states need further hardening.
 - The encoder timeline currently shows calibrated positions. Raw encoder register telemetry should be added as a separate field if required.

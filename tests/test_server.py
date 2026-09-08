@@ -1,3 +1,4 @@
+from pathlib import Path
 from threading import Lock
 
 import numpy as np
@@ -31,6 +32,48 @@ def test_calibration_status_has_both_roles() -> None:
     assert set(response.json()) == {"leader", "follower"}
 
 
+def test_calibration_session_is_idle_without_hardware() -> None:
+    response = client.get("/api/calibration/session")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "idle"
+
+
+def test_import_calibration_writes_official_role_path(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+    response = client.post(
+        "/api/calibration/import",
+        json={"role": "leader", "contents": '{"motors": {"shoulder_pan": 1}}'},
+    )
+
+    target = (
+        tmp_path
+        / ".cache/huggingface/lerobot/calibration/teleoperators/so_leader/SO101.json"
+    )
+    assert response.status_code == 200
+    assert target.exists()
+    assert target.read_text(encoding="utf-8").startswith('{\n  "motors"')
+    assert target.stat().st_mode & 0o777 == 0o600
+
+    download = client.get("/api/calibration/download/leader")
+    assert download.status_code == 200
+    assert download.json()["motors"]["shoulder_pan"] == 1
+
+
+def test_import_calibration_rejects_invalid_json(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+    response = client.post(
+        "/api/calibration/import",
+        json={"role": "follower", "contents": "not-json"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_telemetry_normalizes_lerobot_position_keys() -> None:
     sample = TelemetryHub().publish({"shoulder_pan.pos": -12.5, "gripper.pos": 0.6})
 
@@ -58,7 +101,9 @@ def test_frontend_asset_is_served() -> None:
     assert response.status_code == 200
 
 
-def test_session_setup_and_operation_lock() -> None:
+def test_session_setup_and_operation_lock(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
     response = client.post(
         "/api/session/select",
         json={"leader_port": "/dev/cu.leader", "follower_port": "/dev/cu.follower"},
