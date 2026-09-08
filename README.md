@@ -19,7 +19,7 @@ The app combines:
 
 ## Quick Start
 
-Install the hardware-enabled tool from a Git repository. The `[hardware]` extra pulls in `pyaudio`, which needs the PortAudio system library to build (`brew install portaudio` on macOS shown below):
+Install the hardware-enabled tool from a Git repository. The `[edgeimpulse]` extra pulls in `pyaudio`, which needs the PortAudio system library to build (`brew install portaudio` on macOS shown below):
 
 ```bash
 brew install portaudio
@@ -27,11 +27,11 @@ uv venv --python 3.12
 source .venv/bin/activate
 uv pip install lerobot
 uv pip install 'lerobot[feetech]'
-uv pip install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+uv pip install 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 lerobot-ei-demo
 ```
 
-LeRobot is intentionally installed separately from this app. `uv pip install lerobot` is the default LeRobot installation; add `lerobot[feetech]` for SO-101 motor support. Use the official [LeRobot installation guide](https://huggingface.co/docs/lerobot/en/installation) for platform-specific requirements, calibration, and optional CLI workflows. The app's `[hardware]` extra contains only the Edge Impulse Linux runtime. The base app install contains neither LeRobot nor Edge Impulse.
+LeRobot is intentionally installed separately from this app. `uv pip install lerobot` is the default LeRobot installation; add `lerobot[feetech]` for SO-101 motor support. Use the official [LeRobot installation guide](https://huggingface.co/docs/lerobot/en/installation) for platform-specific requirements, calibration, and optional CLI workflows. The app's `[edgeimpulse]` extra contains only the Edge Impulse Linux runtime. The base app install contains neither LeRobot nor Edge Impulse.
 
 On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does not download NVIDIA CUDA packages. Edge Impulse `.eim` deployments remain the app's accelerated inference path; PyTorch is used by the LeRobot control stack and does not target the VENTUNO Q NPU:
 
@@ -41,7 +41,7 @@ sudo apt install -y build-essential portaudio19-dev
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install --torch-backend cpu 'lerobot[feetech]'
-uv pip install 'lerobot-ei-demo[hardware] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+uv pip install 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
 lerobot-ei-demo
 ```
 
@@ -51,7 +51,7 @@ For a checkout during development, install LeRobot separately in the active envi
 
 ```bash
 uv pip install 'lerobot[feetech]'
-uv sync --extra hardware --extra dev --native-tls
+uv sync --extra edgeimpulse --extra dev --native-tls
 uv run lerobot-ei-demo --port 8000
 ```
 
@@ -59,7 +59,7 @@ On the VENTUNO Q, use the official LeRobot CPU backend while installing the chec
 
 ```bash
 uv pip install --torch-backend cpu 'lerobot[feetech]'
-uv pip install --torch-backend cpu -e '.[hardware,dev]'
+uv pip install --torch-backend cpu -e '.[edgeimpulse,dev]'
 uv run lerobot-ei-demo --port 8000
 ```
 

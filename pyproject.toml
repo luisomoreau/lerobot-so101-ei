@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-hardware = [
+edgeimpulse = [
     "edge-impulse-linux>=1.2.1",
     # edge_impulse_linux/__init__.py unconditionally imports its audio submodule,
     # which requires pyaudio even though this app only runs image models.
