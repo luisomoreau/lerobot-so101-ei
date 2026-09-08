@@ -17,6 +17,8 @@ from lerobot_ei_demo.session import (
     calibration_status,
     discover_ports,
     import_calibration,
+    list_robot_profiles,
+    save_robot_profile,
 )
 from lerobot_ei_demo.telemetry import TelemetryHub
 from lerobot_ei_demo.vision import InferenceService, ModelCatalog
@@ -35,6 +37,19 @@ camera_registry = CameraRegistry()
 camera_streams = CameraStreamRegistry()
 app_config = AppConfig()
 calibration_service = CalibrationService()
+_default_profiles = list_robot_profiles()
+if _default_profiles and _default_profiles[0].get("cameras"):
+    camera_registry.configure(
+        [
+            {
+                "name": camera.get("name", camera.get("id", "Camera")),
+                "index": int(camera["camera_index"]),
+                "selected": True,
+            }
+            for camera in _default_profiles[0]["cameras"]
+            if "camera_index" in camera
+        ]
+    )
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
@@ -92,6 +107,13 @@ class CalibrationStart(BaseModel):
     port: str = Field(min_length=1)
 
 
+class RobotProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    leader_port: str = Field(min_length=1)
+    follower_port: str = Field(min_length=1)
+    cameras: list[dict] = []
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {
@@ -103,7 +125,53 @@ def health() -> dict[str, str]:
 
 @app.get("/api/robots")
 def robots() -> list[dict[str, str]]:
-    return [{"id": "SO-101", "name": "SO-101 leader/follower"}]
+    return [
+        {"id": profile["name"], "name": profile["name"]}
+        for profile in list_robot_profiles()
+    ] or [{"id": "SO-101", "name": "SO-101 leader/follower"}]
+
+
+@app.get("/api/robot-profiles")
+def robot_profiles() -> list[dict]:
+    return list_robot_profiles()
+
+
+@app.post("/api/robot-profiles")
+def create_robot_profile(payload: RobotProfileRequest) -> dict:
+    try:
+        return save_robot_profile(payload.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+class RobotProfileSelection(BaseModel):
+    name: str
+
+
+@app.post("/api/robot-profiles/select")
+def select_robot_profile(selection: RobotProfileSelection) -> dict:
+    profile = next(
+        (item for item in list_robot_profiles() if item["name"] == selection.name),
+        None,
+    )
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Robot profile not found")
+    session.select(
+        leader_port=profile["leader_port"], follower_port=profile["follower_port"]
+    )
+    configured = []
+    for camera in profile.get("cameras", []):
+        if "camera_index" in camera:
+            configured.append(
+                {
+                    "name": camera.get("name", camera.get("id", "Camera")),
+                    "index": int(camera["camera_index"]),
+                    "selected": True,
+                }
+            )
+    if configured:
+        camera_registry.configure(configured)
+    return {"profile": profile, "session": session.snapshot(), "cameras": camera_registry.all()}
 
 
 @app.get("/api/ports")

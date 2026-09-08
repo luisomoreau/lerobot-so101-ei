@@ -101,7 +101,9 @@ def test_frontend_asset_is_served() -> None:
     assert response.status_code == 200
 
 
-def test_session_setup_and_operation_lock() -> None:
+def test_session_setup_and_operation_lock(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
     response = client.post(
         "/api/session/select",
         json={"leader_port": "/dev/cu.leader", "follower_port": "/dev/cu.follower"},
