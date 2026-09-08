@@ -19,9 +19,10 @@ The app combines:
 
 ## Quick Start
 
-Install the hardware-enabled tool from a Git repository:
+Install the hardware-enabled tool from a Git repository. The `[hardware]` extra pulls in `pyaudio`, which needs the PortAudio system library to build (`brew install portaudio` on macOS shown below):
 
 ```bash
+brew install portaudio
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install lerobot
@@ -36,7 +37,7 @@ On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does 
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential
+sudo apt install -y build-essential portaudio19-dev
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install --torch-backend cpu 'lerobot[feetech]'
@@ -46,7 +47,7 @@ lerobot-ei-demo
 
 The VENTUNO Q command uses CPU-only PyTorch because its Qualcomm MPU is not an NVIDIA CUDA device. For full LeRobot calibration and CLI setup, follow the [official LeRobot guide](https://huggingface.co/docs/lerobot/en/installation); the app does not wrap or replace LeRobot's installation process.
 
-For a checkout during development, install LeRobot separately in the active environment:
+For a checkout during development, install LeRobot separately in the active environment (`brew install portaudio` first on macOS if it isn't already installed for `pyaudio`):
 
 ```bash
 uv pip install 'lerobot[feetech]'
@@ -54,7 +55,7 @@ uv sync --extra hardware --extra dev --native-tls
 uv run lerobot-ei-demo --port 8000
 ```
 
-On the VENTUNO Q, use the official LeRobot CPU backend while installing the checkout:
+On the VENTUNO Q, use the official LeRobot CPU backend while installing the checkout (`sudo apt install -y portaudio19-dev` first if it isn't already installed):
 
 ```bash
 uv pip install --torch-backend cpu 'lerobot[feetech]'
