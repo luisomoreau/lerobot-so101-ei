@@ -58,6 +58,10 @@ def test_import_calibration_writes_official_role_path(
     assert target.read_text(encoding="utf-8").startswith('{\n  "motors"')
     assert target.stat().st_mode & 0o777 == 0o600
 
+    download = client.get("/api/calibration/download/leader")
+    assert download.status_code == 200
+    assert download.json()["motors"]["shoulder_pan"] == 1
+
 
 def test_import_calibration_rejects_invalid_json(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))

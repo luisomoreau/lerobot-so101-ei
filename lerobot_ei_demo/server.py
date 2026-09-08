@@ -177,6 +177,23 @@ def import_calibration_file(payload: CalibrationImport) -> dict[str, str | bool]
     return {**imported, "imported": True}
 
 
+@app.get("/api/calibration/download/{role}")
+def download_calibration(role: str) -> FileResponse:
+    relative_path = (
+        "teleoperators/so_leader/SO101.json"
+        if role == "leader"
+        else "robots/so_follower/SO101.json"
+        if role == "follower"
+        else None
+    )
+    if relative_path is None:
+        raise HTTPException(status_code=422, detail="Calibration role must be leader or follower")
+    path = Path.home() / ".cache/huggingface/lerobot/calibration" / relative_path
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Calibration file is not present")
+    return FileResponse(path, filename=f"SO101-{role}.json", media_type="application/json")
+
+
 @app.get("/api/calibration/session")
 def calibration_session() -> dict:
     return calibration_service.snapshot()
