@@ -83,6 +83,11 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .modal-close { min-height: 2.2rem; padding: 0 .7rem; font-size: .75rem; }
 .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
 .setup-grid input[type="file"] { min-height: 3.2rem; padding-top: .55rem; font-size: .75rem; }
+.port-finder { display: grid; gap: .45rem; margin-top: 1rem; padding: .85rem; border: 1px solid #d9e4df; border-radius: 10px; background: #f6f8f5; color: #40514b; }
+.port-finder p { margin: 0; font-size: .8rem; }
+.port-finder > div { display: flex; flex-wrap: wrap; gap: .55rem; }
+.port-finder button { min-height: 2.25rem; font-size: .75rem; }
+.port-finder .secondary-button { background: #fff; color: #173b68; border-color: #173b68; }
 .setup-status { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 1rem; }
 .setup-instructions { display: grid; gap: .55rem; margin-top: 1rem; padding: 1rem; border-left: 4px solid #d93b32; background: #f6f8f5; color: #63736d; font-size: .82rem; line-height: 1.45; }
 .setup-instructions p { margin: 0; font-size: .85rem; }

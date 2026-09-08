@@ -31,6 +31,8 @@ function App() {
   const [calibration, setCalibration] = useState<CalibrationStatus>({ leader: false, follower: false });
   const [cameraSetupOpen, setCameraSetupOpen] = useState(false);
   const [robotSetupOpen, setRobotSetupOpen] = useState(false);
+  const [portBaseline, setPortBaseline] = useState<string[] | null>(null);
+  const [portFinderMessage, setPortFinderMessage] = useState("Ready to scan serial ports.");
   const [edgeImpulseApiKey, setEdgeImpulseApiKey] = useState("");
   const [edgeImpulseProject, setEdgeImpulseProject] = useState("");
   const [eiProjects, setEiProjects] = useState<EiProject[]>([]);
@@ -145,6 +147,26 @@ function App() {
     } catch (error) { setStatus((error as Error).message); }
   }
 
+  function beginPortFinder() {
+    setPortBaseline(ports);
+    setPortFinderMessage("Disconnect one arm, then scan again.");
+  }
+
+  async function scanPortChange() {
+    try {
+      const currentPorts = await request<string[]>("/api/ports");
+      setPorts(currentPorts);
+      if (!portBaseline) {
+        setPortBaseline(currentPorts);
+        setPortFinderMessage("Disconnect one arm, then scan again.");
+        return;
+      }
+      const removed = portBaseline.filter((port) => !currentPorts.includes(port));
+      setPortBaseline(null);
+      setPortFinderMessage(removed.length === 1 ? `Disconnected port: ${removed[0]}` : removed.length === 0 ? "No port disappeared. Check the cable, then try again." : "More than one port disappeared. Reconnect and try one arm at a time.");
+    } catch (error) { setPortFinderMessage((error as Error).message); }
+  }
+
   async function importCalibration(role: CalibrationRole, file: File | undefined) {
     if (!file) return;
     try {
@@ -214,7 +236,7 @@ function App() {
       })}</div> : <p className="muted">No cameras selected yet. Open Add cameras to choose your views.</p>}</section></section>
       <section className="telemetry-column" aria-label="Live robot telemetry"><section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section><RobotTelemetry active={operationActive} /></section>
     </div>
-    {robotSetupOpen && <div className="modal-backdrop" role="presentation" onClick={() => setRobotSetupOpen(false)}><section className="setup-modal" role="dialog" aria-modal="true" aria-labelledby="robot-setup-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><small>ROBOT WORKFLOW</small><h2 id="robot-setup-title">Set up an SO-101 pair</h2></div><button type="button" className="modal-close" onClick={() => setRobotSetupOpen(false)} aria-label="Close robot setup">Close</button></div><p className="config-note">Ports are saved to LeRobot's official ports directory. Calibration imports are copied to the official role-specific calibration paths.</p><div className="setup-grid"><label>Leader port<select value={session?.leader_port ?? ""} onChange={(event) => selectPort("leader", event.target.value)}><option value="">Select a port</option>{ports.map((port) => <option key={port}>{port}</option>)}</select></label><label>Follower port<select value={session?.follower_port ?? ""} onChange={(event) => selectPort("follower", event.target.value)}><option value="">Select a port</option>{ports.map((port) => <option key={port}>{port}</option>)}</select></label></div><div className="setup-grid"><label>Import leader calibration JSON<input type="file" accept="application/json,.json" onChange={(event) => importCalibration("leader", event.target.files?.[0])} /></label><label>Import follower calibration JSON<input type="file" accept="application/json,.json" onChange={(event) => importCalibration("follower", event.target.files?.[0])} /></label></div><div className="calibration-status setup-status"><span className={calibration.leader ? "ready" : "missing"}>Leader {calibration.leader ? "ready" : "missing"}</span><span className={calibration.follower ? "ready" : "missing"}>Follower {calibration.follower ? "ready" : "missing"}</span></div><div className="setup-instructions"><strong>Calibrate</strong><p>Run LeRobot's official calibration workflow in the environment where LeRobot is installed, then import the generated JSON files here. Calibration is interactive and can move hardware.</p><code>lerobot-calibrate --teleop.type=so101_leader --teleop.port=PORT --teleop.id=SO101</code><code>lerobot-calibrate --robot.type=so101_follower --robot.port=PORT --robot.id=SO101</code><a href="https://huggingface.co/docs/lerobot/en/installation" target="_blank" rel="noreferrer">Open LeRobot installation guide</a></div></section></div>}
+    {robotSetupOpen && <div className="modal-backdrop" role="presentation" onClick={() => setRobotSetupOpen(false)}><section className="setup-modal" role="dialog" aria-modal="true" aria-labelledby="robot-setup-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><small>ROBOT WORKFLOW</small><h2 id="robot-setup-title">Set up an SO-101 pair</h2></div><button type="button" className="modal-close" onClick={() => setRobotSetupOpen(false)} aria-label="Close robot setup">Close</button></div><p className="config-note">Ports are saved to LeRobot's official ports directory. Calibration imports are copied to the official role-specific calibration paths.</p><div className="port-finder"><strong>Find a port</strong><p>{portFinderMessage}</p><div><button type="button" onClick={beginPortFinder}>Start scan</button><button type="button" className="secondary-button" onClick={scanPortChange}>Scan again</button></div></div><div className="setup-grid"><label>Leader port<select value={session?.leader_port ?? ""} onChange={(event) => selectPort("leader", event.target.value)}><option value="">Select a port</option>{ports.map((port) => <option key={port}>{port}</option>)}</select></label><label>Follower port<select value={session?.follower_port ?? ""} onChange={(event) => selectPort("follower", event.target.value)}><option value="">Select a port</option>{ports.map((port) => <option key={port}>{port}</option>)}</select></label></div><div className="setup-grid"><label>Import leader calibration JSON<input type="file" accept="application/json,.json" onChange={(event) => importCalibration("leader", event.target.files?.[0])} /></label><label>Import follower calibration JSON<input type="file" accept="application/json,.json" onChange={(event) => importCalibration("follower", event.target.files?.[0])} /></label></div><div className="calibration-status setup-status"><span className={calibration.leader ? "ready" : "missing"}>Leader {calibration.leader ? "ready" : "missing"}</span><span className={calibration.follower ? "ready" : "missing"}>Follower {calibration.follower ? "ready" : "missing"}</span></div><div className="setup-instructions"><strong>Calibrate</strong><p>Run LeRobot's official calibration workflow in the environment where LeRobot is installed, then import the generated JSON files here. Calibration is interactive and can move hardware.</p><code>lerobot-calibrate --teleop.type=so101_leader --teleop.port=PORT --teleop.id=SO101</code><code>lerobot-calibrate --robot.type=so101_follower --robot.port=PORT --robot.id=SO101</code><a href="https://huggingface.co/docs/lerobot/en/installation" target="_blank" rel="noreferrer">Open LeRobot installation guide</a></div></section></div>}
   </main>;
 }
 
