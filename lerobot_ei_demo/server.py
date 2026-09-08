@@ -185,6 +185,8 @@ def calibration_session() -> dict:
 @app.post("/api/calibration/start")
 def start_calibration(payload: CalibrationStart) -> dict:
     try:
+        if controller.active or session.snapshot()["operation"] != "idle":
+            raise RuntimeError("Stop teleoperation before calibrating")
         return calibration_service.start(payload.role, payload.port)
     except (ImportError, RuntimeError, ValueError) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -219,6 +221,8 @@ def select_session(selection: SessionSelection) -> dict[str, str | None]:
 @app.post("/api/teleoperation/start")
 def start_teleoperation() -> dict[str, str | None]:
     try:
+        if calibration_service.active:
+            raise RuntimeError("Stop calibration before starting teleoperation")
         state = session.start("teleoperation")
         if (
             state["leader_port"]

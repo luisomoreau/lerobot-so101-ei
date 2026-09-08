@@ -29,6 +29,11 @@ class CalibrationService:
         with self._lock:
             return asdict(self._state)
 
+    @property
+    def active(self) -> bool:
+        with self._lock:
+            return bool(self._thread and self._thread.is_alive())
+
     def start(self, role: str, port: str) -> dict:
         if role not in {"leader", "follower"}:
             raise ValueError("Calibration role must be leader or follower")
@@ -159,6 +164,10 @@ class CalibrationService:
                 self._state.status = "error"
                 self._state.error = str(error)
                 self._state.message = "Calibration failed."
+                device = self._device
+                self._device = None
+            if device is not None:
+                device.bus.disconnect()
 
     @staticmethod
     def _read_positions(device) -> dict[str, int]:
