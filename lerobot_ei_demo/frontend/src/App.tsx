@@ -333,6 +333,7 @@ function App() {
               <button className="inference-toggle" type="button" aria-pressed={assignment?.enabled ?? false} disabled={!assignment?.model_id} onClick={() => assignModel(camera.id, { enabled: !(assignment?.enabled ?? false) })}>{assignment?.enabled ? "Inference on" : "Inference off"}</button>
               <span className="inference-time">{assignment?.inference_ms != null ? `${assignment.inference_ms.toFixed(1)} ms` : "-- ms"}</span>
             </div>
+            {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
           </div>
         </figure>;
       })}</div> : <p className="muted">No cameras selected yet. Open Add cameras to choose your views.</p>}</section></section>
