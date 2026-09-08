@@ -22,7 +22,7 @@ The app combines:
 Install the hardware-enabled tool from a Git repository. The `[edgeimpulse]` extra pulls in `pyaudio`, which needs the PortAudio system library to build (`brew install portaudio` on macOS shown below):
 
 ```bash
-brew install portaudio
+brew install portaudio ffmepg
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install lerobot
@@ -37,7 +37,7 @@ On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does 
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential portaudio19-dev
+sudo apt install -y build-essential portaudio19-dev ffmpeg
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install --torch-backend cpu 'lerobot[feetech]'
