@@ -27,6 +27,10 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .calibration-status { display: grid; gap: .35rem; font-size: .7rem; font-weight: 700; }
 .calibration-status .ready { color: #55a76b; }
 .calibration-status .missing { color: #d93b32; }
+.calibration-main-downloads { display: grid; gap: .35rem; }
+.calibration-main-downloads a { color: #173b68; font-size: .72rem; font-weight: 800; text-decoration: none; }
+.calibration-main-downloads a:hover { text-decoration: underline; }
+.calibration-main-downloads .disabled-link { color: #a8b4ae; pointer-events: none; }
 .camera-column, .telemetry-column { min-width: 0; }
 .camera-column > .camera-section:first-child { margin-top: 0; }
 .camera-config-list { display: grid; gap: .7rem; }
