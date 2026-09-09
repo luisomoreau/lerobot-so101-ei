@@ -325,7 +325,7 @@ function App() {
           <div className="model-list">{models.length ? models.map((model) => <span key={model.id} className={model.compatible ? "model-chip" : "model-chip unavailable"} title={model.compatible ? model.id : `Not built for ${architectureLabel}`}>{model.name}</span>) : <span className="config-note">No models downloaded yet.</span>}</div>
         </section>
       </aside>
-      <section className="camera-column" aria-label="Selected camera views"><section className="camera-section"><h2>Selected camera views</h2>{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {
+      <section className="camera-column" aria-label="Selected camera views"><section className="camera-section">{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {
         const assignment = assignmentFor(camera.id);
         return <figure className="camera-card" key={camera.id}>
           <img src={`/api/cameras/${encodeURIComponent(camera.id)}/stream`} alt={`${camera.name} live view`} />
