@@ -68,6 +68,7 @@ function App() {
   const [robotSetupMode, setRobotSetupMode] = useState<"new" | "edit">("edit");
   const [draftProfileName, setDraftProfileName] = useState("");
   const [cameraSetupOpen, setCameraSetupOpen] = useState(false);
+  const [eiSetupOpen, setEiSetupOpen] = useState(false);
   const [robotSetupOpen, setRobotSetupOpen] = useState(false);
   const [portBaseline, setPortBaseline] = useState<string[] | null>(null);
   const [portFinderMessage, setPortFinderMessage] = useState("Ready to scan serial ports.");
@@ -314,6 +315,8 @@ function App() {
         <section className="config-section">
           <h2>Edge Impulse</h2>
           <p className="config-note">Download <code>.eim</code> models for this device, then assign one per camera. Detected architecture: <strong>{architectureLabel}</strong>.</p>
+          <button type="button" onClick={() => setEiSetupOpen((open) => !open)}>{eiSetupOpen ? "Close Edge Impulse setup" : "Connect Edge Impulse"}</button>
+          {eiSetupOpen && <>
           <label>API key<input type="password" value={edgeImpulseApiKey} onChange={(event) => setEdgeImpulseApiKey(event.target.value)} placeholder="Paste API key" autoComplete="off" /><span className="config-note">Stored locally in the device config.</span></label>
           <button type="button" onClick={connectEdgeImpulse} disabled={busy || !edgeImpulseApiKey}>Connect project</button>
           {eiProjects.length > 0 && <label>Project<select value={edgeImpulseProject} onChange={(event) => { setEdgeImpulseProject(event.target.value); loadTargets(Number(event.target.value)).catch((error: Error) => setStatus(error.message)); }}>{eiProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>}
@@ -322,6 +325,8 @@ function App() {
             <label>Deployment target<select value={eiTarget} onChange={(event) => setEiTarget(event.target.value)}>{eiTargets.map((target) => <option key={target.format} value={target.format} disabled={!target.compatible}>{target.name}{target.compatible ? "" : " — incompatible"}</option>)}</select></label>
             <button type="button" onClick={downloadModel} disabled={downloading || !eiTarget || !eiExperiment}>{downloading ? "Downloading..." : "Download model"}</button>
           </>}
+          </>}
+          <p className="config-note">Available locally</p>
           <div className="model-list">{models.length ? models.map((model) => <span key={model.id} className={model.compatible ? "model-chip" : "model-chip unavailable"} title={model.compatible ? model.id : `Not built for ${architectureLabel}`}>{model.name}</span>) : <span className="config-note">No models downloaded yet.</span>}</div>
         </section>
       </aside>
