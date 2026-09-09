@@ -182,10 +182,10 @@ The API key is stored by the backend in the demo root at `.edge_impulse_config.j
 
 ### Uploading data to Edge Impulse
 
-Each camera card with a model assigned also has an **Auto-upload every N sec** switch plus an **Upload now** button. Both push the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key:
+Every camera card has an **Auto-upload every N sec** switch plus an **Upload now** button, regardless of whether a model is assigned. Both push the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key:
 
-- **Object detection models (excluding FOMO)**: the image is uploaded alongside a `bounding_boxes.labels` file describing the current frame's detections, using the [Edge Impulse object detection format](https://docs.edgeimpulse.com/tools/specifications/data-annotation/object-detection#edge-impulse-object-detection-format).
-- **FOMO models, classification models, or frames with no detections**: only the image is uploaded, with no label (`x-no-label: 1`).
+- **Object detection models (excluding FOMO)**: the image is uploaded with `x-label` set to the current frame's highest-confidence detection label.
+- **FOMO models, classification models, no model assigned, or frames with no detections**: the image is uploaded unlabeled (`x-no-label: 1`).
 
 Uploads always target the `training` category. Enabling the switch starts a background loop (checked every second) that uploads once the configured interval has elapsed; `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
 

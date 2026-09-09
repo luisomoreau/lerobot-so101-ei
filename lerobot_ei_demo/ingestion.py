@@ -1,6 +1,5 @@
 """Edge Impulse Ingestion API client used to upload camera frames for retraining."""
 
-import json
 import uuid
 from urllib import error as url_error
 from urllib import request
@@ -65,29 +64,3 @@ def upload_files(
         ) from error
     except Exception as error:
         raise IngestionError(f"Edge Impulse ingestion failed: {error}") from error
-
-
-def object_detection_labels(
-    image_filename: str, category: str, boxes: list[dict]
-) -> bytes:
-    """Build the Edge Impulse object detection `bounding_boxes.labels` payload."""
-    payload = {
-        "version": 1,
-        "files": [
-            {
-                "path": image_filename,
-                "category": category,
-                "boundingBoxes": [
-                    {
-                        "label": str(box["label"]),
-                        "x": int(box["x"]),
-                        "y": int(box["y"]),
-                        "width": int(box["width"]),
-                        "height": int(box["height"]),
-                    }
-                    for box in boxes
-                ],
-            }
-        ],
-    }
-    return json.dumps(payload).encode("utf-8")

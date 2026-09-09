@@ -321,14 +321,17 @@ class InferenceService:
             and not model_meta.get("is_fomo")
             and not model_meta.get("centroid_only")
         )
+        label = None
+        if is_object_detection:
+            top = max(detections, key=lambda item: item.get("confidence", 0))
+            label = str(top.get("label") or "") or None
         try:
-            # Always upload the plain image first so a labels-attachment issue
-            # never blocks the core (unlabeled) upload the user asked for.
             ingestion.upload_files(
                 api_key,
                 "training",
                 [(filename, image_bytes, "image/jpeg")],
-                no_label=True,
+                label=label,
+                no_label=label is None,
             )
         except ingestion.IngestionError as error:
             with self._lock:
@@ -339,33 +342,13 @@ class InferenceService:
                 assignment.last_upload_status = "error"
                 assignment.upload_error = str(error)
             raise RuntimeError(str(error)) from error
-        labels_error: str | None = None
-        if is_object_detection:
-            try:
-                labels_bytes = ingestion.object_detection_labels(
-                    filename, "training", detections
-                )
-                ingestion.upload_files(
-                    api_key,
-                    "training",
-                    [
-                        (
-                            "bounding_boxes.labels",
-                            labels_bytes,
-                            "application/octet-stream",
-                        )
-                    ],
-                    no_label=True,
-                )
-            except ingestion.IngestionError as error:
-                labels_error = f"Image uploaded, but labels failed: {error}"
         with self._lock:
             assignment = self._assignments.setdefault(
                 camera_id, CameraInference(camera_id=camera_id)
             )
             assignment.last_upload_at = time.time()
             assignment.last_upload_status = "ok"
-            assignment.upload_error = labels_error
+            assignment.upload_error = None
         return self.status()
 
     def _upload_loop(self) -> None:
