@@ -326,11 +326,11 @@ function App() {
           <figcaption>{camera.name}</figcaption>
           <div className="camera-inference">
             <div className="inference-control">
-              <button className="inference-toggle" type="button" aria-pressed={assignment?.enabled ?? false} onClick={() => {
+              <label className="switch"><input type="checkbox" checked={assignment?.enabled ?? false} onChange={() => {
                 if (assignment?.enabled) { assignModel(camera.id, { enabled: false }); return; }
                 if (assignment?.model_id) { assignModel(camera.id, { enabled: true }); return; }
                 setInferencePickerOpen((current) => ({ ...current, [camera.id]: !current[camera.id] }));
-              }}>{assignment?.enabled ? "Stop inference" : "Run inference"}</button>
+              }} aria-label={`Run inference for ${camera.name}`} /><span className="switch-track"></span><span className="switch-label">{assignment?.enabled ? "Inference running" : "Run inference"}</span></label>
               <span className="inference-time">{assignment?.inference_ms != null ? `${assignment.inference_ms.toFixed(1)} ms` : "-- ms"}</span>
             </div>
             {assignment?.model_id && !assignment.enabled && !inferencePickerOpen[camera.id] && <div className="inference-model-label">{models.find((model) => model.id === assignment.model_id)?.name ?? assignment.model_id}<button type="button" className="secondary-button" onClick={() => setInferencePickerOpen((current) => ({ ...current, [camera.id]: true }))}>Change model</button></div>}
