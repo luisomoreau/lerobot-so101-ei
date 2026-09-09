@@ -57,11 +57,11 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .camera-status-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #55a76b; }
 .camera-card figcaption { padding: .65rem .8rem 0; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
 .camera-inference { display: grid; gap: .45rem; padding: .5rem .8rem .8rem; }
+.camera-inference select { width: 100%; min-width: 0; }
 .camera-inference option:disabled { color: #a8b4ae; }
 .camera-inference .check-label { font-size: .75rem; font-weight: 700; color: #40514b; }
 .camera-inference input[type="checkbox"]:disabled + * { color: #a8b4ae; }
-.inference-control { display: flex; align-items: center; gap: .55rem; }
-.inference-control select { flex: 1; min-width: 0; }
+.inference-control { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
 .switch { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; }
 .switch input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .switch-track { position: relative; flex-shrink: 0; width: 2.6rem; height: 1.5rem; border-radius: 999px; background: #afbbb6; transition: background-color .2s ease; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .15); }
