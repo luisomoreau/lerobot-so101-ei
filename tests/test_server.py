@@ -204,9 +204,10 @@ def test_upload_now_sends_labels_for_object_detection_but_not_fomo(monkeypatch) 
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 1
-    assert "bounding_boxes.labels" in calls[0]["files"]
-    assert calls[0]["no_label"] is True
+    assert len(calls) == 2
+    assert "bounding_boxes.labels" not in calls[0]["files"]
+    assert "bounding_boxes.labels" in calls[1]["files"]
+    assert all(call["no_label"] is True for call in calls)
 
     with server.inference._lock:
         server.inference._last_model["opencv:0"]["is_fomo"] = True
@@ -214,8 +215,8 @@ def test_upload_now_sends_labels_for_object_detection_but_not_fomo(monkeypatch) 
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 2
-    assert "bounding_boxes.labels" not in calls[1]["files"]
+    assert len(calls) == 3
+    assert "bounding_boxes.labels" not in calls[2]["files"]
 
     server.inference.clear()
 

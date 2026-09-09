@@ -318,22 +318,34 @@ class InferenceService:
         image_bytes = buffer.tobytes()
         safe_camera_id = re.sub(r"[^A-Za-z0-9_-]+", "-", camera_id)
         filename = f"{safe_camera_id}.{uuid.uuid4().hex}.jpg"
-        files = [(filename, image_bytes, "image/jpeg")]
         is_object_detection = (
             bool(detections)
             and not model_meta.get("is_fomo")
             and not model_meta.get("centroid_only")
         )
-        if is_object_detection:
-            files.append(
-                (
-                    "bounding_boxes.labels",
-                    ingestion.object_detection_labels(filename, "training", detections),
-                    "application/octet-stream",
-                )
-            )
         try:
-            ingestion.upload_files(api_key, "training", files, no_label=True)
+            ingestion.upload_files(
+                api_key,
+                "training",
+                [(filename, image_bytes, "image/jpeg")],
+                no_label=True,
+            )
+            if is_object_detection:
+                labels_bytes = ingestion.object_detection_labels(
+                    filename, "training", detections
+                )
+                ingestion.upload_files(
+                    api_key,
+                    "training",
+                    [
+                        (
+                            "bounding_boxes.labels",
+                            labels_bytes,
+                            "application/octet-stream",
+                        )
+                    ],
+                    no_label=True,
+                )
         except ingestion.IngestionError as error:
             with self._lock:
                 assignment = self._assignments.get(camera_id)
