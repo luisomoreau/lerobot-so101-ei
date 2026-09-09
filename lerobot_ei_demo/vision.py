@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 from dataclasses import asdict, dataclass
@@ -315,7 +316,8 @@ class InferenceService:
         if not ok:
             raise RuntimeError("Failed to encode frame for upload")
         image_bytes = buffer.tobytes()
-        filename = f"{camera_id}.{uuid.uuid4().hex}.jpg"
+        safe_camera_id = re.sub(r"[^A-Za-z0-9_-]+", "-", camera_id)
+        filename = f"{safe_camera_id}.{uuid.uuid4().hex}.jpg"
         files = [(filename, image_bytes, "image/jpeg")]
         is_object_detection = (
             bool(detections)
@@ -327,7 +329,7 @@ class InferenceService:
                 (
                     "bounding_boxes.labels",
                     ingestion.object_detection_labels(filename, "training", detections),
-                    "application/json",
+                    "application/octet-stream",
                 )
             )
         try:
