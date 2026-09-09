@@ -69,6 +69,7 @@ function App() {
   const [draftProfileName, setDraftProfileName] = useState("");
   const [cameraSetupOpen, setCameraSetupOpen] = useState(false);
   const [eiSetupOpen, setEiSetupOpen] = useState(false);
+  const [inferencePickerOpen, setInferencePickerOpen] = useState<Record<string, boolean>>({});
   const [robotSetupOpen, setRobotSetupOpen] = useState(false);
   const [portBaseline, setPortBaseline] = useState<string[] | null>(null);
   const [portFinderMessage, setPortFinderMessage] = useState("Ready to scan serial ports.");
@@ -324,14 +325,19 @@ function App() {
           <img src={`/api/cameras/${encodeURIComponent(camera.id)}/stream`} alt={`${camera.name} live view`} />
           <figcaption>{camera.name}</figcaption>
           <div className="camera-inference">
-            <select value={assignment?.model_id ?? ""} onChange={(event) => assignModel(camera.id, { model_id: event.target.value || null })} aria-label={`Edge Impulse model for ${camera.name}`}>
-              <option value="">No model</option>
-              {models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}
-            </select>
             <div className="inference-control">
-              <button className="inference-toggle" type="button" aria-pressed={assignment?.enabled ?? false} disabled={!assignment?.model_id} onClick={() => assignModel(camera.id, { enabled: !(assignment?.enabled ?? false) })}>{assignment?.enabled ? "Inference on" : "Inference off"}</button>
+              <button className="inference-toggle" type="button" aria-pressed={assignment?.enabled ?? false} onClick={() => {
+                if (assignment?.enabled) { assignModel(camera.id, { enabled: false }); return; }
+                if (assignment?.model_id) { assignModel(camera.id, { enabled: true }); return; }
+                setInferencePickerOpen((current) => ({ ...current, [camera.id]: !current[camera.id] }));
+              }}>{assignment?.enabled ? "Stop inference" : "Run inference"}</button>
               <span className="inference-time">{assignment?.inference_ms != null ? `${assignment.inference_ms.toFixed(1)} ms` : "-- ms"}</span>
             </div>
+            {assignment?.model_id && !assignment.enabled && !inferencePickerOpen[camera.id] && <div className="inference-model-label">{models.find((model) => model.id === assignment.model_id)?.name ?? assignment.model_id}<button type="button" className="secondary-button" onClick={() => setInferencePickerOpen((current) => ({ ...current, [camera.id]: true }))}>Change model</button></div>}
+            {inferencePickerOpen[camera.id] && !assignment?.enabled && <select value={assignment?.model_id ?? ""} onChange={(event) => { assignModel(camera.id, { model_id: event.target.value || null, enabled: Boolean(event.target.value) }); setInferencePickerOpen((current) => ({ ...current, [camera.id]: false })); }} aria-label={`Edge Impulse model for ${camera.name}`}>
+              <option value="">Select a model</option>
+              {models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}
+            </select>}
             {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
           </div>
         </figure>;
