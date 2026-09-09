@@ -122,19 +122,20 @@ main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .robot-setup-buttons { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0; }
 .robot-setup-buttons button { min-height: 2.2rem; font-size: .8rem; }
 .telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.telemetry-grid > div { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
-.telemetry-grid > div:last-child { border-color: #18365d; background: #10294a; }
+.telemetry-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0; }
+.telemetry-panel { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
+.telemetry-panel.dark { border-color: #18365d; background: #10294a; }
 .panel-heading { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; color: #40514b; font-size: .9rem; font-weight: 800; }
-.telemetry-grid > div:last-child .panel-heading { color: #f4f7fb; }
+.telemetry-panel.dark .panel-heading { color: #f4f7fb; }
 .panel-heading small { color: #d93b32; font-size: .62rem; letter-spacing: .08em; }
-.telemetry-grid > div:last-child .panel-heading small { color: #d9f04a; }
+.telemetry-panel.dark .panel-heading small { color: #d9f04a; }
 .robot-scene { height: 280px; min-height: 240px; overflow: hidden; border: 1px solid #d3e0da; border-radius: 10px; background: #edf5f1; }
 .chart-wrap { overflow: hidden; }
 .chart-wrap svg { display: block; width: 100%; height: 210px; }
 .chart-axis { stroke: #c9d8d1; stroke-width: 1; stroke-dasharray: 4 5; }
 .legend { display: flex; flex-wrap: wrap; gap: .55rem; color: #80908a; font-size: .65rem; }
-.telemetry-grid > div:last-child .legend { color: #c5d3e3; }
-@media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-panel { position: static; } }
+.telemetry-panel.dark .legend { color: #c5d3e3; }
+@media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-panel { position: static; } .telemetry-row { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .setup { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { main { padding-right: 1rem; padding-left: 1rem; } .camera-config-row { grid-template-columns: 64px minmax(0, 1fr); } .camera-config-row img { width: 64px; height: 48px; } .telemetry-grid { gap: .75rem; } .telemetry-grid > div { padding: .75rem; } }
 @media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }

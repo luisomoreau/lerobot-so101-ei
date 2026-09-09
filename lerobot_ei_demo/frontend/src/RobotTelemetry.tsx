@@ -1,4 +1,5 @@
 import { createElement, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFManipulator from "urdf-loader/src/urdf-manipulator-element.js";
@@ -81,8 +82,8 @@ function JointChart({ samples }: { samples: JointSample[] }) {
   return <div className="chart-wrap"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Joint encoder time series"><line x1={padding} x2={width - padding} y1={height / 2} y2={height / 2} className="chart-axis" />{points.map((line, index) => <polyline key={JOINTS[index]} points={line} fill="none" stroke={colors[index]} strokeWidth="2" />)}</svg><div className="legend">{JOINTS.map((joint, index) => <span key={joint} style={{ color: colors[index] }}>● {joint}</span>)}</div></div>;
 }
 
-export function RobotTelemetry({ active }: { active: boolean }) {
+export function RobotTelemetry({ active, sidebar }: { active: boolean; sidebar?: ReactNode }) {
   const samples = useJointTelemetry(active);
   const latest = samples.at(-1);
-  return <section className="telemetry-grid"><div><div className="panel-heading"><span>Live SO-101 model</span><small>{latest ? "STREAMING" : "WAITING FOR TELEMETRY"}</small></div><RobotScene sample={latest} /></div><div><div className="panel-heading"><span>Joint encoder timeline</span><small>{samples.length} samples</small></div><JointChart samples={samples} /></div></section>;
+  return <section className="telemetry-grid"><div className="telemetry-row"><div className="telemetry-panel"><div className="panel-heading"><span>Live SO-101 model</span><small>{latest ? "STREAMING" : "WAITING FOR TELEMETRY"}</small></div><RobotScene sample={latest} /></div>{sidebar}</div><div className="telemetry-panel dark"><div className="panel-heading"><span>Joint encoder timeline</span><small>{samples.length} samples</small></div><JointChart samples={samples} /></div></section>;
 }
