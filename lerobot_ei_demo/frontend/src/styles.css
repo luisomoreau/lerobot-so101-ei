@@ -73,7 +73,7 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .camera-setup button { margin-top: 1rem; }
 .muted { color: #80908a; font-size: .92rem; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 2rem; }
-.telemetry-column > .actions { margin-top: 0; margin-bottom: 1rem; }
+main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .status { display: inline-flex; align-items: center; gap: .55rem; padding: .7rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #63736d; font-size: .78rem; font-weight: 800; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }
 .dot { width: .6rem; height: .6rem; border-radius: 50%; background: #afbbb6; }
 .dot.active { background: #55a76b; }

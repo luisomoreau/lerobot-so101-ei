@@ -306,6 +306,7 @@ function App() {
 
   return <main>
     <header><div><div className="brand-lockup" aria-label="Arduino, Edge Impulse, and LeRobot"><img src="/assets/arduino.svg" alt="Arduino" /><span>+</span><img src="/assets/edge-impulse.svg" alt="Edge Impulse" /><span>+</span><img className="lerobot-logo" src="/assets/lerobot.png" alt="LeRobot" /></div><h1>Teleoperated Arm</h1><p>Prepare the SO-101, then move into a local robotics session. Perception stays on the VENTUNO Q while the arm remains responsive.</p></div></header>
+    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
     <div className="app-layout">
       <aside className="config-panel" aria-label="Configuration">
         <div className="config-heading"><span>Configuration</span><small>LOCAL DEVICE</small></div>
@@ -342,7 +343,7 @@ function App() {
           </div>
         </figure>;
       })}</div> : <p className="muted">No cameras selected yet. Open Add cameras to choose your views.</p>}</section></section>
-      <section className="telemetry-column" aria-label="Live robot telemetry"><section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section><RobotTelemetry active={operationActive} /></section>
+      <section className="telemetry-column" aria-label="Live robot telemetry"><RobotTelemetry active={operationActive} /></section>
     </div>
     {robotSetupOpen && <CalibrationPanel role={calibrationRole} setRole={setCalibrationRole} session={session} ports={ports} portFinderMessage={portFinderMessage} startPortScan={beginPortFinder} viewPort={scanPortChange} selectPort={selectPort} calibration={calibration} importCalibration={importCalibration} state={calibrationSession} start={startCalibration} action={calibrationAction} mode={robotSetupMode} profileName={draftProfileName} setProfileName={setDraftProfileName} saveProfile={saveRobotProfile} close={() => setRobotSetupOpen(false)} cameras={cameras} cameraSetupOpen={cameraSetupOpen} setCameraSetupOpen={setCameraSetupOpen} updateCamera={updateCamera} saveCameras={saveCameras} busy={busy} />}
   </main>;
