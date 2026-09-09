@@ -356,12 +356,12 @@ function App() {
               {models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}
             </select>}
             {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
-            {assignment?.model_id && <div className="upload-control">
-              <label className="switch"><input type="checkbox" checked={assignment.upload_enabled} onChange={() => configureUpload(camera.id, { enabled: !assignment.upload_enabled })} aria-label={`Auto-upload ${camera.name} to Edge Impulse`} /><span className="switch-track"></span><span className="switch-label">Auto-upload every</span></label>
-              <input className="upload-interval" type="number" min={1} step={1} value={assignment.upload_interval_s} onChange={(event) => configureUpload(camera.id, { interval_s: Number(event.target.value) || 1 })} aria-label={`Upload interval in seconds for ${camera.name}`} />
+            <div className="upload-control">
+              <label className="switch"><input type="checkbox" checked={assignment?.upload_enabled ?? false} onChange={() => configureUpload(camera.id, { enabled: !(assignment?.upload_enabled ?? false) })} aria-label={`Auto-upload ${camera.name} to Edge Impulse`} /><span className="switch-track"></span><span className="switch-label">Auto-upload every</span></label>
+              <input className="upload-interval" type="number" min={1} step={1} value={assignment?.upload_interval_s ?? 5} onChange={(event) => configureUpload(camera.id, { interval_s: Number(event.target.value) || 1 })} aria-label={`Upload interval in seconds for ${camera.name}`} />
               <span className="config-note">sec</span>
               <button type="button" className="secondary-button" onClick={() => uploadNow(camera.id)}>Upload now</button>
-            </div>}
+            </div>
             {assignment?.upload_error && <p className="inference-error">{assignment.upload_error}</p>}
           </div>
         </figure>;

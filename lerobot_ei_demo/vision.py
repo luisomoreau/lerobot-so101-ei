@@ -281,11 +281,9 @@ class InferenceService:
         self, camera_id: str, enabled: bool, interval_s: float | None = None
     ) -> dict[str, object]:
         with self._lock:
-            assignment = self._assignments.get(camera_id)
-            if assignment is None:
-                raise FileNotFoundError(
-                    f"No inference assignment for camera: {camera_id}"
-                )
+            assignment = self._assignments.setdefault(
+                camera_id, CameraInference(camera_id=camera_id)
+            )
             assignment.upload_enabled = enabled
             if interval_s is not None:
                 assignment.upload_interval_s = max(1.0, float(interval_s))
@@ -298,8 +296,8 @@ class InferenceService:
         with self._lock:
             frame = self._last_frames.get(camera_id)
             detections = list(self._last_detections.get(camera_id) or [])
-            model_meta = self._last_model.get(camera_id)
-        if frame is None or model_meta is None:
+            model_meta = self._last_model.get(camera_id) or {}
+        if frame is None:
             raise RuntimeError(
                 "No recent frame available to upload for this camera yet"
             )
@@ -323,30 +321,51 @@ class InferenceService:
             and not model_meta.get("is_fomo")
             and not model_meta.get("centroid_only")
         )
-        files = [(filename, image_bytes, "image/jpeg")]
-        if is_object_detection:
-            labels_bytes = ingestion.object_detection_labels(
-                filename, "training", detections
-            )
-            files.append(
-                ("bounding_boxes.labels", labels_bytes, "application/octet-stream")
-            )
         try:
-            ingestion.upload_files(api_key, "training", files, no_label=True)
+            # Always upload the plain image first so a labels-attachment issue
+            # never blocks the core (unlabeled) upload the user asked for.
+            ingestion.upload_files(
+                api_key,
+                "training",
+                [(filename, image_bytes, "image/jpeg")],
+                no_label=True,
+            )
         except ingestion.IngestionError as error:
             with self._lock:
-                assignment = self._assignments.get(camera_id)
-                if assignment is not None:
-                    assignment.last_upload_at = time.time()
-                    assignment.last_upload_status = "error"
-                    assignment.upload_error = str(error)
-            raise RuntimeError(str(error)) from error
-        with self._lock:
-            assignment = self._assignments.get(camera_id)
-            if assignment is not None:
+                assignment = self._assignments.setdefault(
+                    camera_id, CameraInference(camera_id=camera_id)
+                )
                 assignment.last_upload_at = time.time()
-                assignment.last_upload_status = "ok"
-                assignment.upload_error = None
+                assignment.last_upload_status = "error"
+                assignment.upload_error = str(error)
+            raise RuntimeError(str(error)) from error
+        labels_error: str | None = None
+        if is_object_detection:
+            try:
+                labels_bytes = ingestion.object_detection_labels(
+                    filename, "training", detections
+                )
+                ingestion.upload_files(
+                    api_key,
+                    "training",
+                    [
+                        (
+                            "bounding_boxes.labels",
+                            labels_bytes,
+                            "application/octet-stream",
+                        )
+                    ],
+                    no_label=True,
+                )
+            except ingestion.IngestionError as error:
+                labels_error = f"Image uploaded, but labels failed: {error}"
+        with self._lock:
+            assignment = self._assignments.setdefault(
+                camera_id, CameraInference(camera_id=camera_id)
+            )
+            assignment.last_upload_at = time.time()
+            assignment.last_upload_status = "ok"
+            assignment.upload_error = labels_error
         return self.status()
 
     def _upload_loop(self) -> None:
@@ -400,8 +419,11 @@ class InferenceService:
         import cv2
 
         with self._lock:
+            self._last_frames[camera_id] = frame.copy()
             assignment = self._assignments.get(camera_id)
             if assignment is None or not assignment.enabled or not assignment.model_id:
+                self._last_detections.pop(camera_id, None)
+                self._last_model.pop(camera_id, None)
                 return frame
             model = self.catalog.find(assignment.model_id)
         if model is None:

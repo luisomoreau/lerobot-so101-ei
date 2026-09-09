@@ -177,7 +177,11 @@ def select_robot_profile(selection: RobotProfileSelection) -> dict:
             )
     if configured:
         camera_registry.configure(configured)
-    return {"profile": profile, "session": session.snapshot(), "cameras": camera_registry.all()}
+    return {
+        "profile": profile,
+        "session": session.snapshot(),
+        "cameras": camera_registry.all(),
+    }
 
 
 @app.get("/api/ports")
@@ -261,11 +265,15 @@ def download_calibration(role: str) -> FileResponse:
         else None
     )
     if relative_path is None:
-        raise HTTPException(status_code=422, detail="Calibration role must be leader or follower")
+        raise HTTPException(
+            status_code=422, detail="Calibration role must be leader or follower"
+        )
     path = Path.home() / ".cache/huggingface/lerobot/calibration" / relative_path
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Calibration file is not present")
-    return FileResponse(path, filename=f"SO101-{role}.json", media_type="application/json")
+    return FileResponse(
+        path, filename=f"SO101-{role}.json", media_type="application/json"
+    )
 
 
 @app.get("/api/calibration/session")
@@ -459,10 +467,7 @@ def stop_inference(camera_id: str | None = None) -> dict[str, object]:
 
 @app.post("/api/inference/upload-config")
 def configure_inference_upload(config: UploadConfig) -> dict[str, object]:
-    try:
-        return inference.set_upload(config.camera_id, config.enabled, config.interval_s)
-    except FileNotFoundError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+    return inference.set_upload(config.camera_id, config.enabled, config.interval_s)
 
 
 @app.post("/api/inference/upload")

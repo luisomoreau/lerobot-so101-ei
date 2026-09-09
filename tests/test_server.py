@@ -141,13 +141,18 @@ def test_inference_model_lifecycle(tmp_path, monkeypatch) -> None:
     assert response.json()["cameras"] == []
 
 
-def test_upload_config_requires_existing_assignment() -> None:
+def test_upload_config_creates_assignment_lazily() -> None:
     response = client.post(
         "/api/inference/upload-config",
-        json={"camera_id": "opencv:99", "enabled": True},
+        json={"camera_id": "opencv:99", "enabled": True, "interval_s": 10},
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    cameras = {entry["camera_id"]: entry for entry in response.json()["cameras"]}
+    assert cameras["opencv:99"]["upload_enabled"] is True
+    assert cameras["opencv:99"]["upload_interval_s"] == 10
+
+    client.post("/api/inference/stop")
 
 
 def test_upload_now_requires_recent_frame(tmp_path, monkeypatch) -> None:
@@ -204,9 +209,10 @@ def test_upload_now_sends_labels_for_object_detection_but_not_fomo(monkeypatch) 
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 1
-    assert "bounding_boxes.labels" in calls[0]["files"]
-    assert calls[0]["no_label"] is True
+    assert len(calls) == 2
+    assert "bounding_boxes.labels" not in calls[0]["files"]
+    assert "bounding_boxes.labels" in calls[1]["files"]
+    assert all(call["no_label"] is True for call in calls)
 
     with server.inference._lock:
         server.inference._last_model["opencv:0"]["is_fomo"] = True
@@ -214,8 +220,79 @@ def test_upload_now_sends_labels_for_object_detection_but_not_fomo(monkeypatch) 
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 2
-    assert "bounding_boxes.labels" not in calls[1]["files"]
+    assert len(calls) == 3
+    assert "bounding_boxes.labels" not in calls[2]["files"]
+
+    server.inference.clear()
+
+
+def test_upload_now_works_without_a_model_assigned(monkeypatch) -> None:
+    from lerobot_ei_demo import vision as vision_module
+
+    calls = []
+
+    def fake_upload_files(
+        api_key, category, files, label=None, no_label=False, timeout=30
+    ):
+        calls.append([name for name, _content, _type in files])
+        return "ok"
+
+    monkeypatch.setattr(vision_module.ingestion, "upload_files", fake_upload_files)
+    monkeypatch.setattr(
+        server.app_config,
+        "get_edge_impulse",
+        lambda: {"api_key": "test-key", "project_id": None},
+    )
+
+    frame = np.zeros((10, 10, 3), dtype="uint8")
+    with server.inference._lock:
+        server.inference._last_frames["opencv:0"] = frame
+
+    result = server.inference.upload_now("opencv:0")
+
+    assert len(calls) == 1
+    assert "bounding_boxes.labels" not in calls[0]
+    cameras = {entry["camera_id"]: entry for entry in result["cameras"]}
+    assert cameras["opencv:0"]["last_upload_status"] == "ok"
+
+    server.inference.clear()
+
+
+def test_upload_now_reports_labels_failure_without_blocking_image(monkeypatch) -> None:
+    from lerobot_ei_demo import vision as vision_module
+
+    def flaky_upload_files(
+        api_key, category, files, label=None, no_label=False, timeout=30
+    ):
+        if any(name == "bounding_boxes.labels" for name, _content, _type in files):
+            raise vision_module.ingestion.IngestionError("Invalid type")
+        return "ok"
+
+    monkeypatch.setattr(vision_module.ingestion, "upload_files", flaky_upload_files)
+    monkeypatch.setattr(
+        server.app_config,
+        "get_edge_impulse",
+        lambda: {"api_key": "test-key", "project_id": None},
+    )
+
+    frame = np.zeros((10, 10, 3), dtype="uint8")
+    detections = [
+        {"label": "cube", "confidence": 0.9, "x": 1, "y": 1, "width": 4, "height": 4}
+    ]
+    with server.inference._lock:
+        server.inference._last_frames["opencv:0"] = frame
+        server.inference._last_detections["opencv:0"] = detections
+        server.inference._last_model["opencv:0"] = {
+            "model_id": "model.eim",
+            "is_fomo": False,
+            "centroid_only": False,
+        }
+
+    result = server.inference.upload_now("opencv:0")
+
+    cameras = {entry["camera_id"]: entry for entry in result["cameras"]}
+    assert cameras["opencv:0"]["last_upload_status"] == "ok"
+    assert "Invalid type" in cameras["opencv:0"]["upload_error"]
 
     server.inference.clear()
 
