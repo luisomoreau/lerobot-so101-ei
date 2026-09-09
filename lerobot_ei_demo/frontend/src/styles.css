@@ -13,7 +13,8 @@ h1 { margin: .45rem 0 1rem; max-width: 680px; color: #24302d; font-family: "Aven
 p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-serif; }
 .setup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
 .app-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(240px, .8fr) minmax(360px, 1fr); gap: 1.5rem; margin-top: 2rem; align-items: start; }
-.config-panel { position: sticky; top: 1rem; display: grid; min-width: 0; width: 100%; gap: 0; overflow: hidden; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
+.config-column { position: sticky; top: 1rem; display: grid; gap: 1.5rem; align-self: start; }
+.config-panel { display: grid; min-width: 0; width: 100%; gap: 0; overflow: hidden; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .config-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 1rem; border-bottom: 1px solid #d9e4df; color: #40514b; font-size: .9rem; font-weight: 800; }
 .config-heading small { color: #55a76b; font-size: .6rem; letter-spacing: .08em; }
 .config-section { display: grid; gap: .8rem; padding: 1rem; border-bottom: 1px solid #d9e4df; }
@@ -122,7 +123,6 @@ main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .robot-setup-buttons { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0; }
 .robot-setup-buttons button { min-height: 2.2rem; font-size: .8rem; }
 .telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.telemetry-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0; }
 .telemetry-panel { min-width: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .telemetry-panel.dark { border-color: #18365d; background: #10294a; }
 .panel-heading { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; color: #40514b; font-size: .9rem; font-weight: 800; }
@@ -135,7 +135,7 @@ main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .chart-axis { stroke: #c9d8d1; stroke-width: 1; stroke-dasharray: 4 5; }
 .legend { display: flex; flex-wrap: wrap; gap: .55rem; color: #80908a; font-size: .65rem; }
 .telemetry-panel.dark .legend { color: #c5d3e3; }
-@media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-panel { position: static; } .telemetry-row { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .app-layout { grid-template-columns: minmax(0, 1fr); } .config-column { position: static; } }
 @media (max-width: 700px) { .setup { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { main { padding-right: 1rem; padding-left: 1rem; } .camera-config-row { grid-template-columns: 64px minmax(0, 1fr); } .camera-config-row img { width: 64px; height: 48px; } .telemetry-grid { gap: .75rem; } .telemetry-grid > div { padding: .75rem; } }
 @media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }
