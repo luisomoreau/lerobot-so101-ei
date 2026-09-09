@@ -180,6 +180,15 @@ The detected architecture is reported by `GET /api/edge-impulse/architecture`. C
 
 The API key is stored by the backend in the demo root at `.edge_impulse_config.json` (or the path set by `LEROBOT_EI_CONFIG`) with `0600` file permissions. This file is ignored by git. The configuration rail loads the saved key when the app starts and saves it after connecting. Use a device configuration service instead for unattended booth deployments with centralized secret management.
 
+### Uploading data to Edge Impulse
+
+Each camera card with a model assigned also has an **Auto-upload every N sec** switch plus an **Upload now** button. Both push the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key:
+
+- **Object detection models (excluding FOMO)**: the image is uploaded alongside a `bounding_boxes.labels` file describing the current frame's detections, using the [Edge Impulse object detection format](https://docs.edgeimpulse.com/tools/specifications/data-annotation/object-detection#edge-impulse-object-detection-format).
+- **FOMO models, classification models, or frames with no detections**: only the image is uploaded, with no label (`x-no-label: 1`).
+
+Uploads always target the `training` category. Enabling the switch starts a background loop (checked every second) that uploads once the configured interval has elapsed; `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
+
 ## Development
 
 Backend files live in `lerobot_ei_demo/`. The frontend is a React/Vite application in `lerobot_ei_demo/frontend/`.
@@ -245,6 +254,8 @@ GET  /api/edge-impulse/download/{job_id}
 GET  /api/inference/status
 POST /api/inference/assign            { camera_id, model_id, enabled, confidence }
 POST /api/inference/stop              ?camera_id=
+POST /api/inference/upload-config     { camera_id, enabled, interval_s }
+POST /api/inference/upload            ?camera_id=
 ```
 
 The telemetry stream publishes normalized joint names:

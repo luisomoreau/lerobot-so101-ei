@@ -29,13 +29,13 @@ FRONTEND_DIST = FRONTEND_ROOT / "dist"
 app = FastAPI(title="LeRobot + Edge Impulse Demo")
 session = RobotSession()
 model_catalog = ModelCatalog()
-inference = InferenceService(model_catalog)
+app_config = AppConfig()
+inference = InferenceService(model_catalog, app_config)
 downloads = edge_impulse.DownloadManager(model_catalog.root)
 telemetry = TelemetryHub()
 controller = LeRobotController(telemetry.publish)
 camera_registry = CameraRegistry()
 camera_streams = CameraStreamRegistry()
-app_config = AppConfig()
 calibration_service = CalibrationService()
 _default_profiles = list_robot_profiles()
 if _default_profiles and _default_profiles[0].get("cameras"):
@@ -65,6 +65,12 @@ class InferenceAssignment(BaseModel):
     model_id: str | None = None
     enabled: bool = False
     confidence: float = 0.5
+
+
+class UploadConfig(BaseModel):
+    camera_id: str
+    enabled: bool = False
+    interval_s: float | None = None
 
 
 class EdgeImpulseCredentials(BaseModel):
@@ -449,6 +455,22 @@ def assign_inference(assignment: InferenceAssignment) -> dict[str, object]:
 @app.post("/api/inference/stop")
 def stop_inference(camera_id: str | None = None) -> dict[str, object]:
     return inference.clear(camera_id)
+
+
+@app.post("/api/inference/upload-config")
+def configure_inference_upload(config: UploadConfig) -> dict[str, object]:
+    try:
+        return inference.set_upload(config.camera_id, config.enabled, config.interval_s)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.post("/api/inference/upload")
+def upload_inference_frame(camera_id: str) -> dict[str, object]:
+    try:
+        return inference.upload_now(camera_id)
+    except RuntimeError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get("/")

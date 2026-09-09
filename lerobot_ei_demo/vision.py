@@ -1,10 +1,12 @@
 import os
 import time
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock, Thread
 from typing import Any
 
+from lerobot_ei_demo import ingestion
 from lerobot_ei_demo.edge_impulse import host_architecture, is_compatible
 
 
@@ -25,6 +27,11 @@ class CameraInference:
     status: str = "idle"
     error: str | None = None
     inference_ms: float | None = None
+    upload_enabled: bool = False
+    upload_interval_s: float = 5.0
+    last_upload_at: float | None = None
+    last_upload_status: str | None = None
+    upload_error: str | None = None
 
 
 @dataclass
@@ -199,11 +206,20 @@ class ModelCatalog:
 class InferenceService:
     """Tracks which Edge Impulse model is bound to each camera stream."""
 
-    def __init__(self, catalog: ModelCatalog) -> None:
+    def __init__(self, catalog: ModelCatalog, app_config: Any | None = None) -> None:
         self.catalog = catalog
+        self.app_config = app_config
         self._lock = Lock()
         self._assignments: dict[str, CameraInference] = {}
         self._runners: dict[str, RunnerState] = {}
+        self._last_frames: dict[str, Any] = {}
+        self._last_detections: dict[str, list[dict[str, Any]]] = {}
+        self._last_model: dict[str, dict[str, Any]] = {}
+        self._upload_stop = Event()
+        self._upload_thread = Thread(
+            target=self._upload_loop, name="ei-upload", daemon=True
+        )
+        self._upload_thread.start()
 
     def status(self) -> dict[str, object]:
         with self._lock:
@@ -247,12 +263,113 @@ class InferenceService:
                 self._assignments.clear()
                 runners = list(self._runners.values())
                 self._runners.clear()
+                self._last_frames.clear()
+                self._last_detections.clear()
+                self._last_model.clear()
             else:
                 self._assignments.pop(camera_id, None)
+                self._last_frames.pop(camera_id, None)
+                self._last_detections.pop(camera_id, None)
+                self._last_model.pop(camera_id, None)
                 runners = []
         for runner in runners:
             runner.runner.stop()
         return self.status()
+
+    def set_upload(
+        self, camera_id: str, enabled: bool, interval_s: float | None = None
+    ) -> dict[str, object]:
+        with self._lock:
+            assignment = self._assignments.get(camera_id)
+            if assignment is None:
+                raise FileNotFoundError(
+                    f"No inference assignment for camera: {camera_id}"
+                )
+            assignment.upload_enabled = enabled
+            if interval_s is not None:
+                assignment.upload_interval_s = max(1.0, float(interval_s))
+            if not enabled:
+                assignment.last_upload_status = None
+                assignment.upload_error = None
+        return self.status()
+
+    def upload_now(self, camera_id: str) -> dict[str, object]:
+        with self._lock:
+            frame = self._last_frames.get(camera_id)
+            detections = list(self._last_detections.get(camera_id) or [])
+            model_meta = self._last_model.get(camera_id)
+        if frame is None or model_meta is None:
+            raise RuntimeError(
+                "No recent frame available to upload for this camera yet"
+            )
+        api_key = (
+            str(self.app_config.get_edge_impulse()["api_key"])
+            if self.app_config is not None
+            else ""
+        )
+        if not api_key:
+            raise RuntimeError("Connect an Edge Impulse project before uploading data")
+        import cv2
+
+        ok, buffer = cv2.imencode(".jpg", frame)
+        if not ok:
+            raise RuntimeError("Failed to encode frame for upload")
+        image_bytes = buffer.tobytes()
+        filename = f"{camera_id}.{uuid.uuid4().hex}.jpg"
+        files = [(filename, image_bytes, "image/jpeg")]
+        is_object_detection = (
+            bool(detections)
+            and not model_meta.get("is_fomo")
+            and not model_meta.get("centroid_only")
+        )
+        if is_object_detection:
+            files.append(
+                (
+                    "bounding_boxes.labels",
+                    ingestion.object_detection_labels(filename, "training", detections),
+                    "application/json",
+                )
+            )
+        try:
+            ingestion.upload_files(api_key, "training", files, no_label=True)
+        except ingestion.IngestionError as error:
+            with self._lock:
+                assignment = self._assignments.get(camera_id)
+                if assignment is not None:
+                    assignment.last_upload_at = time.time()
+                    assignment.last_upload_status = "error"
+                    assignment.upload_error = str(error)
+            raise RuntimeError(str(error)) from error
+        with self._lock:
+            assignment = self._assignments.get(camera_id)
+            if assignment is not None:
+                assignment.last_upload_at = time.time()
+                assignment.last_upload_status = "ok"
+                assignment.upload_error = None
+        return self.status()
+
+    def _upload_loop(self) -> None:
+        while not self._upload_stop.is_set():
+            due = []
+            with self._lock:
+                now = time.time()
+                for camera_id, assignment in self._assignments.items():
+                    if not assignment.upload_enabled:
+                        continue
+                    last = assignment.last_upload_at or 0
+                    if now - last >= assignment.upload_interval_s:
+                        due.append(camera_id)
+            for camera_id in due:
+                try:
+                    self.upload_now(camera_id)
+                except Exception as error:  # noqa: BLE001 - keep the loop alive
+                    with self._lock:
+                        assignment = self._assignments.get(camera_id)
+                        if assignment is not None:
+                            assignment.last_upload_at = time.time()
+                            assignment.last_upload_status = "error"
+                            assignment.upload_error = str(error)
+            self._upload_stop.wait(1.0)
 
     def _runner_for(self, model: dict[str, str | bool]) -> RunnerState:
         model_id = str(model["id"])
@@ -306,6 +423,14 @@ class InferenceService:
                 if float(item.get("value", item.get("confidence", 0)))
                 >= assignment.confidence
             ]
+            with self._lock:
+                self._last_frames[camera_id] = frame.copy()
+                self._last_detections[camera_id] = detections
+                self._last_model[camera_id] = {
+                    "model_id": assignment.model_id,
+                    "is_fomo": ModelCatalog.is_fomo(model),
+                    "centroid_only": runner.centroid_only,
+                }
             frame = _mask_unused_regions(frame, runner)
             for detection in detections:
                 x, y = detection["x"], detection["y"]

@@ -141,6 +141,85 @@ def test_inference_model_lifecycle(tmp_path, monkeypatch) -> None:
     assert response.json()["cameras"] == []
 
 
+def test_upload_config_requires_existing_assignment() -> None:
+    response = client.post(
+        "/api/inference/upload-config",
+        json={"camera_id": "opencv:99", "enabled": True},
+    )
+
+    assert response.status_code == 404
+
+
+def test_upload_now_requires_recent_frame(tmp_path, monkeypatch) -> None:
+    model = tmp_path / f"model-{host_architecture()['architecture']}.eim"
+    model.write_bytes(b"stub")
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
+    client.post(
+        "/api/inference/assign",
+        json={"camera_id": "opencv:0", "model_id": model.name, "enabled": False},
+    )
+
+    response = client.post("/api/inference/upload", params={"camera_id": "opencv:0"})
+
+    assert response.status_code == 400
+    client.post("/api/inference/stop")
+
+
+def test_upload_now_sends_labels_for_object_detection_but_not_fomo(monkeypatch) -> None:
+    from lerobot_ei_demo import vision as vision_module
+
+    calls = []
+
+    def fake_upload_files(
+        api_key, category, files, label=None, no_label=False, timeout=30
+    ):
+        calls.append(
+            {"files": [name for name, _content, _type in files], "no_label": no_label}
+        )
+        return "ok"
+
+    monkeypatch.setattr(vision_module.ingestion, "upload_files", fake_upload_files)
+    monkeypatch.setattr(
+        server.app_config,
+        "get_edge_impulse",
+        lambda: {"api_key": "test-key", "project_id": None},
+    )
+
+    frame = np.zeros((10, 10, 3), dtype="uint8")
+    detections = [
+        {"label": "cube", "confidence": 0.9, "x": 1, "y": 1, "width": 4, "height": 4}
+    ]
+
+    with server.inference._lock:
+        server.inference._assignments["opencv:0"] = vision_module.CameraInference(
+            camera_id="opencv:0", model_id="model.eim", enabled=True
+        )
+        server.inference._last_frames["opencv:0"] = frame
+        server.inference._last_detections["opencv:0"] = detections
+        server.inference._last_model["opencv:0"] = {
+            "model_id": "model.eim",
+            "is_fomo": False,
+            "centroid_only": False,
+        }
+
+    server.inference.upload_now("opencv:0")
+
+    assert len(calls) == 1
+    assert "bounding_boxes.labels" in calls[0]["files"]
+    assert calls[0]["no_label"] is True
+
+    with server.inference._lock:
+        server.inference._last_model["opencv:0"]["is_fomo"] = True
+        server.inference._last_model["opencv:0"]["centroid_only"] = True
+
+    server.inference.upload_now("opencv:0")
+
+    assert len(calls) == 2
+    assert "bounding_boxes.labels" not in calls[1]["files"]
+
+    server.inference.clear()
+
+
 def test_inference_assignment_is_per_camera(tmp_path, monkeypatch) -> None:
     model = tmp_path / f"model-{host_architecture()['architecture']}.eim"
     model.write_bytes(b"stub")

@@ -70,6 +70,9 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .switch input:checked + .switch-track::after { transform: translateX(1.1rem); }
 .switch input:focus-visible + .switch-track { outline: 2px solid #173b68; outline-offset: 2px; }
 .switch-label { font: 700 .75rem "Arial Narrow", sans-serif; color: #40514b; }
+.upload-control { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid #d9e4df; border-radius: 8px; background: #f6f8f5; }
+.upload-interval { width: 4rem; min-height: 2rem; padding: 0 .5rem; text-align: center; }
+.upload-control button { min-height: 2rem; padding: 0 .6rem; font-size: .68rem; }
 .inference-time { min-width: 4.2rem; color: #40514b; font: 700 .75rem "Arial Narrow", sans-serif; text-align: right; }
 .inference-error { margin: .4rem 0 0; padding: .5rem .6rem; border-radius: 6px; background: #fdecea; color: #b3261e; font-size: .72rem; line-height: 1.35; word-break: break-word; }
 .model-list { display: flex; flex-wrap: wrap; gap: .35rem; }
