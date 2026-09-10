@@ -301,11 +301,8 @@ class InferenceService:
             raise RuntimeError(
                 "No recent frame available to upload for this camera yet"
             )
-        api_key = (
-            str(self.app_config.get_edge_impulse()["api_key"])
-            if self.app_config is not None
-            else ""
-        )
+        ei_config = self.app_config.get_edge_impulse() if self.app_config else {}
+        api_key = str(ei_config.get("api_key") or "")
         if not api_key:
             raise RuntimeError("Connect an Edge Impulse project before uploading data")
         import cv2
@@ -321,17 +318,28 @@ class InferenceService:
             and not model_meta.get("is_fomo")
             and not model_meta.get("centroid_only")
         )
-        label = None
-        if is_object_detection:
-            top = max(detections, key=lambda item: item.get("confidence", 0))
-            label = str(top.get("label") or "") or None
+        bounding_boxes = (
+            [
+                {
+                    "label": str(item["label"]),
+                    "x": int(item["x"]),
+                    "y": int(item["y"]),
+                    "width": int(item["width"]),
+                    "height": int(item["height"]),
+                }
+                for item in detections
+            ]
+            if is_object_detection
+            else None
+        )
         try:
             ingestion.upload_files(
                 api_key,
                 "training",
                 [(filename, image_bytes, "image/jpeg")],
-                label=label,
-                no_label=label is None,
+                no_label=True,
+                metadata={"source": f"SO101-{safe_camera_id}-camera"},
+                bounding_boxes=bounding_boxes,
             )
         except ingestion.IngestionError as error:
             with self._lock:

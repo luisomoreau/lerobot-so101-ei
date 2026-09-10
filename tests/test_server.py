@@ -170,24 +170,37 @@ def test_upload_now_requires_recent_frame(tmp_path, monkeypatch) -> None:
     client.post("/api/inference/stop")
 
 
-def test_upload_now_sends_x_label_for_object_detection_but_not_fomo(
+def test_upload_now_sets_bounding_boxes_for_object_detection_but_not_fomo(
     monkeypatch,
 ) -> None:
     from lerobot_ei_demo import vision as vision_module
 
-    calls = []
+    upload_calls = []
 
     def fake_upload_files(
-        api_key, category, files, label=None, no_label=False, timeout=30
+        api_key,
+        category,
+        files,
+        label=None,
+        no_label=False,
+        metadata=None,
+        bounding_boxes=None,
+        timeout=30,
     ):
-        calls.append({"label": label, "no_label": no_label})
+        upload_calls.append(
+            {
+                "no_label": no_label,
+                "metadata": metadata,
+                "bounding_boxes": bounding_boxes,
+            }
+        )
         return "ok"
 
     monkeypatch.setattr(vision_module.ingestion, "upload_files", fake_upload_files)
     monkeypatch.setattr(
         server.app_config,
         "get_edge_impulse",
-        lambda: {"api_key": "test-key", "project_id": None},
+        lambda: {"api_key": "test-key", "project_id": 123},
     )
 
     frame = np.zeros((10, 10, 3), dtype="uint8")
@@ -209,9 +222,12 @@ def test_upload_now_sends_x_label_for_object_detection_but_not_fomo(
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 1
-    assert calls[0]["label"] == "cube"
-    assert calls[0]["no_label"] is False
+    assert len(upload_calls) == 1
+    assert upload_calls[0]["no_label"] is True
+    assert upload_calls[0]["metadata"] == {"source": "SO101-opencv-0-camera"}
+    assert upload_calls[0]["bounding_boxes"] == [
+        {"label": "cube", "x": 1, "y": 1, "width": 4, "height": 4}
+    ]
 
     with server.inference._lock:
         server.inference._last_model["opencv:0"]["is_fomo"] = True
@@ -219,9 +235,8 @@ def test_upload_now_sends_x_label_for_object_detection_but_not_fomo(
 
     server.inference.upload_now("opencv:0")
 
-    assert len(calls) == 2
-    assert calls[1]["label"] is None
-    assert calls[1]["no_label"] is True
+    assert len(upload_calls) == 2
+    assert upload_calls[1]["bounding_boxes"] is None
 
     server.inference.clear()
 
@@ -232,7 +247,14 @@ def test_upload_now_works_without_a_model_assigned(monkeypatch) -> None:
     calls = []
 
     def fake_upload_files(
-        api_key, category, files, label=None, no_label=False, timeout=30
+        api_key,
+        category,
+        files,
+        label=None,
+        no_label=False,
+        metadata=None,
+        bounding_boxes=None,
+        timeout=30,
     ):
         calls.append({"label": label, "no_label": no_label})
         return "ok"

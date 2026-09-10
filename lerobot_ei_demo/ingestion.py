@@ -1,5 +1,6 @@
 """Edge Impulse Ingestion API client used to upload camera frames for retraining."""
 
+import json
 import uuid
 from urllib import error as url_error
 from urllib import request
@@ -32,6 +33,8 @@ def upload_files(
     files: list[tuple[str, bytes, str]],
     label: str | None = None,
     no_label: bool = False,
+    metadata: dict[str, str] | None = None,
+    bounding_boxes: list[dict[str, str | int]] | None = None,
     timeout: int = 30,
 ) -> str:
     """Upload one or more files to an Edge Impulse project's ingestion endpoint.
@@ -48,6 +51,10 @@ def upload_files(
         headers["x-no-label"] = "1"
     elif label:
         headers["x-label"] = label
+    if metadata:
+        headers["x-metadata"] = json.dumps(metadata)
+    if bounding_boxes:
+        headers["x-bounding-boxes"] = json.dumps(bounding_boxes)
     req = request.Request(
         f"{INGESTION_BASE_URL}/api/{category}/files",
         data=body,
