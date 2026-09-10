@@ -132,7 +132,7 @@ main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .robot-profile-editor button { min-height: 2.25rem; font-size: .75rem; }
 .camera-setup-inline { margin-top: 1rem; padding: .85rem; border: 1px solid #d9e4df; border-radius: 10px; background: #f6f8f5; }
 .camera-setup-inline h2 { margin: 0 0 .3rem; font-size: .95rem; }
-.data-collection h2 { margin: 0 0 .3rem; font-size: .95rem; }
+.data-collection h2, .run-inference h2 { margin: 0 0 .3rem; font-size: .7rem; color: #63736d; letter-spacing: .08em; }
 .calibration-download-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .8rem; padding: .75rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #f6f8f5; color: #40514b; font-size: .75rem; }
 .calibration-download-inline a { color: #173b68; font-weight: 800; text-decoration: none; }
 .calibration-download-inline a:hover { text-decoration: underline; }
