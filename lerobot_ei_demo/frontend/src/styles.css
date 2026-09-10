@@ -82,6 +82,7 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .camera-inference-row { display: grid; gap: .4rem; min-width: 0; max-width: 100%; }
 .model-select { width: 100%; min-width: 0; max-width: 100%; }
 .run-inference, .data-collection { min-width: 0; max-width: 100%; }
+.data-collection .upload-control { padding-bottom: .5rem; }
 .upload-control button { min-height: 2rem; padding: 0 .6rem; font-size: .68rem; }
 .inference-time { min-width: 4.2rem; color: #40514b; font: 700 .75rem "Arial Narrow", sans-serif; text-align: right; }
 .inference-error { margin: .4rem 0 0; padding: .5rem .6rem; border-radius: 6px; background: #fdecea; color: #b3261e; font-size: .72rem; line-height: 1.35; word-break: break-word; }
