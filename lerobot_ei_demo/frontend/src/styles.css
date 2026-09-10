@@ -56,13 +56,13 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .camera-section { margin-top: 2.5rem; }
 h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .cameras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; width: 100%; }
-.camera-card { overflow: hidden; min-width: 0; margin: 0; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
-.camera-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #e3ece7; }
+.camera-card { min-width: 0; margin: 0; }
+.camera-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #e3ece7; border: 1px solid #c2d1ca; border-radius: 14px; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .saved-camera-list { display: grid; gap: .65rem; }
 .saved-camera { display: flex; align-items: center; gap: .65rem; min-height: 3rem; padding: .7rem .85rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #40514b; font-weight: 700; box-shadow: 0 4px 12px rgba(40, 73, 61, .05); }
 .saved-camera small { margin-left: auto; color: #55a76b; font-size: .65rem; font-weight: 800; text-transform: uppercase; }
 .camera-status-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #55a76b; }
-.camera-card figcaption { padding: .65rem .8rem 0; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+.camera-card figcaption { padding: .5rem 0 0; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
 .camera-inference { display: grid; gap: .45rem; padding: .5rem .8rem .8rem; }
 .camera-inference select { width: 100%; min-width: 0; }
 .camera-inference option:disabled { color: #a8b4ae; }
