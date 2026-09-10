@@ -123,7 +123,9 @@ function App() {
     setBusy(true);
     try {
       const projects = await postJson<EiProject[]>("/api/edge-impulse/projects", { api_key: edgeImpulseApiKey });
-      const projectId = Number(edgeImpulseProject) || projects[0]?.id;
+      const previousId = Number(edgeImpulseProject);
+      const stillAccessible = projects.some((project) => project.id === previousId);
+      const projectId = (stillAccessible ? previousId : projects[0]?.id) ?? undefined;
       if (projectId) {
         setEdgeImpulseProject(String(projectId));
         await request("/api/edge-impulse/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: edgeImpulseApiKey, project_id: projectId }) });
