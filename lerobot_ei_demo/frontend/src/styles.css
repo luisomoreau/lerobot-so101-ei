@@ -15,6 +15,7 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .app-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(240px, .8fr) minmax(360px, 1fr); gap: 1.5rem; margin-top: 2rem; align-items: start; }
 .config-column { position: sticky; top: 1rem; display: grid; gap: 1.5rem; align-self: start; }
 .config-panel { display: grid; min-width: 0; width: 100%; gap: 0; overflow: hidden; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
+.config-panel--flat { box-shadow: none; }
 .config-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 1rem; border-bottom: 1px solid #d9e4df; color: #40514b; font-size: .9rem; font-weight: 800; }
 .config-heading small { color: #55a76b; font-size: .6rem; letter-spacing: .08em; }
 .config-section { display: grid; gap: .8rem; padding: 1rem; border-bottom: 1px solid #d9e4df; }
@@ -130,6 +131,7 @@ main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
 .robot-profile-editor button { min-height: 2.25rem; font-size: .75rem; }
 .camera-setup-inline { margin-top: 1rem; padding: .85rem; border: 1px solid #d9e4df; border-radius: 10px; background: #f6f8f5; }
 .camera-setup-inline h2 { margin: 0 0 .3rem; font-size: .95rem; }
+.data-collection h2 { margin: 0 0 .3rem; font-size: .95rem; }
 .calibration-download-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .8rem; padding: .75rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #f6f8f5; color: #40514b; font-size: .75rem; }
 .calibration-download-inline a { color: #173b68; font-weight: 800; text-decoration: none; }
 .calibration-download-inline a:hover { text-decoration: underline; }
