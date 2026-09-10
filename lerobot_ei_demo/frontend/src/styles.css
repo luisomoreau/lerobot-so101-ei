@@ -16,8 +16,6 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .config-column { position: sticky; top: 1rem; display: grid; gap: 1.5rem; align-self: start; }
 .config-panel { display: grid; min-width: 0; width: 100%; gap: 0; overflow: hidden; border: 1px solid #c2d1ca; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(40, 73, 61, .08); }
 .config-panel--flat { box-shadow: none; }
-.config-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 1rem; border-bottom: 1px solid #d9e4df; color: #40514b; font-size: .9rem; font-weight: 800; }
-.config-heading small { color: #55a76b; font-size: .6rem; letter-spacing: .08em; }
 .config-section { display: grid; gap: .8rem; padding: 1rem; border-bottom: 1px solid #d9e4df; }
 .config-section > * { min-width: 0; max-width: 100%; }
 .config-section:last-child { border-bottom: 0; }
@@ -26,9 +24,11 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .collapsible-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .collapsible-toggle:hover { background: none; }
 .collapsible-toggle h2 { margin: 0; }
+.collapsible-toggle-title { display: flex; align-items: baseline; gap: .5rem; }
+.collapsible-badge { color: #55a76b; font-size: .6rem; letter-spacing: .08em; }
 .collapsible-caret { display: inline-flex; color: #80908a; font-size: 1.1rem; transition: transform .15s ease; }
 .collapsible-caret.open { transform: rotate(90deg); }
-.collapsible-body { display: grid; gap: .8rem; }
+.collapsible-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem; min-width: 0; }
 .calibration-status { display: grid; gap: .35rem; font-size: .7rem; font-weight: 700; }
 .calibration-status .ready { color: #55a76b; }
 .calibration-status .missing { color: #d93b32; }
@@ -76,8 +76,12 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .switch input:checked + .switch-track { background: #2d8b68; }
 .switch input:checked + .switch-track::after { transform: translateX(1.1rem); }
 .switch input:focus-visible + .switch-track { outline: 2px solid #173b68; outline-offset: 2px; }
-.switch-label { font: 700 .75rem "Arial Narrow", sans-serif; color: #40514b; }
-.upload-control { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: 0; border: 0; background: none; }
+.switch-label { display: inline-block; min-width: 4.5rem; font: 700 .75rem "Arial Narrow", sans-serif; color: #40514b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload-control { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: 0; border: 0; background: none; min-width: 0; max-width: 100%; }
+.upload-control select { flex: 1 1 120px; min-width: 0; }
+.camera-inference-row { display: grid; gap: .4rem; min-width: 0; max-width: 100%; }
+.model-select { width: 100%; min-width: 0; max-width: 100%; }
+.run-inference, .data-collection { min-width: 0; max-width: 100%; }
 .upload-interval { width: 4rem; min-height: 2rem; padding: 0 .5rem; text-align: center; }
 .upload-control button { min-height: 2rem; padding: 0 .6rem; font-size: .68rem; }
 .inference-time { min-width: 4.2rem; color: #40514b; font: 700 .75rem "Arial Narrow", sans-serif; text-align: right; }
