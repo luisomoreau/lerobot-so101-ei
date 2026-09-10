@@ -10,7 +10,7 @@ type EiExperiment = { id: number; name: string };
 type EiTarget = { format: string; name: string; description: string; compatible: boolean };
 type EiModel = { id: string; name: string; path: string; compatible: boolean };
 type EiConfig = { api_key: string; project_id: number | null };
-type CameraInference = { camera_id: string; model_id: string | null; enabled: boolean; confidence: number; status: string; error: string | null; inference_ms: number | null };
+type CameraInference = { camera_id: string; model_id: string | null; enabled: boolean; confidence: number; status: string; error: string | null; inference_ms: number | null; last_upload_at: number | null; last_upload_status: string | null; upload_error: string | null };
 type InferenceStatus = { architecture: Architecture; models: EiModel[]; cameras: CameraInference[] };
 type DownloadJob = { id: string; status: string; model: string | null; error: string | null };
 type CalibrationRole = "leader" | "follower";
@@ -68,6 +68,9 @@ function App() {
   const [robotSetupMode, setRobotSetupMode] = useState<"new" | "edit">("edit");
   const [draftProfileName, setDraftProfileName] = useState("");
   const [cameraSetupOpen, setCameraSetupOpen] = useState(false);
+  const [robotCardOpen, setRobotCardOpen] = useState(false);
+  const [eiCardOpen, setEiCardOpen] = useState(false);
+  const [inferenceOpen, setInferenceOpen] = useState<Record<string, boolean>>({});
   const [robotSetupOpen, setRobotSetupOpen] = useState(false);
   const [portBaseline, setPortBaseline] = useState<string[] | null>(null);
   const [portFinderMessage, setPortFinderMessage] = useState("Ready to scan serial ports.");
@@ -75,7 +78,6 @@ function App() {
   const [calibrationSession, setCalibrationSession] = useState<CalibrationSession | null>(null);
   const [edgeImpulseApiKey, setEdgeImpulseApiKey] = useState("");
   const [edgeImpulseProject, setEdgeImpulseProject] = useState("");
-  const [eiProjects, setEiProjects] = useState<EiProject[]>([]);
   const [eiExperiments, setEiExperiments] = useState<EiExperiment[]>([]);
   const [eiExperiment, setEiExperiment] = useState("");
   const [eiTargets, setEiTargets] = useState<EiTarget[]>([]);
@@ -121,8 +123,9 @@ function App() {
     setBusy(true);
     try {
       const projects = await postJson<EiProject[]>("/api/edge-impulse/projects", { api_key: edgeImpulseApiKey });
-      setEiProjects(projects);
-      const projectId = Number(edgeImpulseProject) || projects[0]?.id;
+      const previousId = Number(edgeImpulseProject);
+      const stillAccessible = projects.some((project) => project.id === previousId);
+      const projectId = (stillAccessible ? previousId : projects[0]?.id) ?? undefined;
       if (projectId) {
         setEdgeImpulseProject(String(projectId));
         await request("/api/edge-impulse/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: edgeImpulseApiKey, project_id: projectId }) });
@@ -170,6 +173,13 @@ function App() {
     try {
       setInference(await postJson<InferenceStatus>("/api/inference/assign", body));
       setStatus(body.enabled ? `Inference enabled on ${cameraId}` : `Inference off on ${cameraId}`);
+    } catch (error) { setStatus((error as Error).message); }
+  }
+
+  async function uploadNow(cameraId: string) {
+    try {
+      setInference(await postJson<InferenceStatus>(`/api/inference/upload?camera_id=${encodeURIComponent(cameraId)}`, {}));
+      setStatus(`Uploaded a frame from ${cameraId} to Edge Impulse`);
     } catch (error) { setStatus((error as Error).message); }
   }
 
@@ -306,43 +316,47 @@ function App() {
 
   return <main>
     <header><div><div className="brand-lockup" aria-label="Arduino, Edge Impulse, and LeRobot"><img src="/assets/arduino.svg" alt="Arduino" /><span>+</span><img src="/assets/edge-impulse.svg" alt="Edge Impulse" /><span>+</span><img className="lerobot-logo" src="/assets/lerobot.png" alt="LeRobot" /></div><h1>Teleoperated Arm</h1><p>Prepare the SO-101, then move into a local robotics session. Perception stays on the VENTUNO Q while the arm remains responsive.</p></div></header>
+    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
     <div className="app-layout">
-      <aside className="config-panel" aria-label="Configuration">
-        <div className="config-heading"><span>Configuration</span><small>LOCAL DEVICE</small></div>
-        <section className="config-section"><h2>Robot setup</h2><label>Robot profile<select value={robotProfileName} onChange={(event) => selectRobotProfile(event.target.value)}>{robotProfiles.length === 0 && <option value="">No robots saved yet</option>}{robotProfiles.map((profile) => <option key={profile.name} value={profile.name}>{profile.name}</option>)}</select></label><div className="robot-setup-buttons"><button type="button" onClick={openEditRobot} disabled={!robotProfileName}>Edit {robotProfileName || "robot"}</button><button type="button" className="secondary-button" onClick={openNewRobot}>Add new robot</button></div><div className="calibration-status"><span className={calibration.leader ? "ready" : "missing"}>Leader {calibration.leader ? "calibrated" : "needs calibration"}</span><span className={calibration.follower ? "ready" : "missing"}>Follower {calibration.follower ? "calibrated" : "needs calibration"}</span></div></section>
-        <section className="config-section">
-          <h2>Edge Impulse</h2>
-          <p className="config-note">Download <code>.eim</code> models for this device, then assign one per camera. Detected architecture: <strong>{architectureLabel}</strong>.</p>
-          <label>API key<input type="password" value={edgeImpulseApiKey} onChange={(event) => setEdgeImpulseApiKey(event.target.value)} placeholder="Paste API key" autoComplete="off" /><span className="config-note">Stored locally in the device config.</span></label>
-          <button type="button" onClick={connectEdgeImpulse} disabled={busy || !edgeImpulseApiKey}>Connect project</button>
-          {eiProjects.length > 0 && <label>Project<select value={edgeImpulseProject} onChange={(event) => { setEdgeImpulseProject(event.target.value); loadTargets(Number(event.target.value)).catch((error: Error) => setStatus(error.message)); }}>{eiProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>}
-          {eiExperiments.length > 0 && <label>Experiment<select value={eiExperiment} onChange={(event) => setEiExperiment(event.target.value)}>{eiExperiments.map((experiment) => <option key={experiment.id} value={experiment.id}>{experiment.name}</option>)}</select></label>}
-          {eiTargets.length > 0 && <>
-            <label>Deployment target<select value={eiTarget} onChange={(event) => setEiTarget(event.target.value)}>{eiTargets.map((target) => <option key={target.format} value={target.format} disabled={!target.compatible}>{target.name}{target.compatible ? "" : " — incompatible"}</option>)}</select></label>
-            <button type="button" onClick={downloadModel} disabled={downloading || !eiTarget || !eiExperiment}>{downloading ? "Downloading..." : "Download model"}</button>
-          </>}
-          <div className="model-list">{models.length ? models.map((model) => <span key={model.id} className={model.compatible ? "model-chip" : "model-chip unavailable"} title={model.compatible ? model.id : `Not built for ${architectureLabel}`}>{model.name}</span>) : <span className="config-note">No models downloaded yet.</span>}</div>
-        </section>
+      <div className="config-column">
+      <aside className="config-panel" aria-label="Robot setup">
+        <section className="config-section"><button type="button" className="collapsible-toggle" onClick={() => setRobotCardOpen((open) => !open)} aria-expanded={robotCardOpen}><span className="collapsible-toggle-title"><h2>Robot setup</h2><small className="collapsible-badge">LOCAL DEVICE</small></span><span className={`collapsible-caret${robotCardOpen ? " open" : ""}`} aria-hidden="true">›</span></button>{robotCardOpen && <div className="collapsible-body"><label>Robot profile<select value={robotProfileName} onChange={(event) => selectRobotProfile(event.target.value)}>{robotProfiles.length === 0 && <option value="">No robots saved yet</option>}{robotProfiles.map((profile) => <option key={profile.name} value={profile.name}>{profile.name}</option>)}</select></label><div className="robot-setup-buttons"><button type="button" onClick={openEditRobot} disabled={!robotProfileName}>Edit {robotProfileName || "robot"}</button><button type="button" className="secondary-button" onClick={openNewRobot}>Add new robot</button></div><div className="calibration-status"><span className={calibration.leader ? "ready" : "missing"}>Leader {calibration.leader ? "calibrated" : "needs calibration"}</span><span className={calibration.follower ? "ready" : "missing"}>Follower {calibration.follower ? "calibrated" : "needs calibration"}</span></div></div>}</section>
       </aside>
-      <section className="camera-column" aria-label="Selected camera views"><section className="camera-section"><h2>Selected camera views</h2>{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {
-        const assignment = assignmentFor(camera.id);
+      <aside className="config-panel config-panel--flat" aria-label="Edge Impulse">
+        <section className="config-section"><button type="button" className="collapsible-toggle" onClick={() => setEiCardOpen((open) => !open)} aria-expanded={eiCardOpen}><h2>Edge Impulse</h2><span className={`collapsible-caret${eiCardOpen ? " open" : ""}`} aria-hidden="true">›</span></button>{eiCardOpen && <div className="collapsible-body"><p className="config-note">Download <code>.eim</code> models for this device, then assign one per camera. Detected architecture: <strong>{architectureLabel}</strong>.</p><label>API key<input type="password" value={edgeImpulseApiKey} onChange={(event) => setEdgeImpulseApiKey(event.target.value)} placeholder="Paste API key" autoComplete="off" /><span className="config-note">Stored locally in the device config.</span></label><button type="button" onClick={connectEdgeImpulse} disabled={busy || !edgeImpulseApiKey}>Connect project</button>{eiExperiments.length > 0 && <label>Experiment<select value={eiExperiment} onChange={(event) => setEiExperiment(event.target.value)}>{eiExperiments.map((experiment) => <option key={experiment.id} value={experiment.id}>{experiment.name}</option>)}</select></label>}{eiTargets.length > 0 && <><label>Deployment target<select value={eiTarget} onChange={(event) => setEiTarget(event.target.value)}>{eiTargets.map((target) => <option key={target.format} value={target.format} disabled={!target.compatible}>{target.name}{target.compatible ? "" : " — incompatible"}</option>)}</select></label><button type="button" onClick={downloadModel} disabled={downloading || !eiTarget || !eiExperiment}>{downloading ? "Downloading..." : "Download model"}</button></>}<p className="config-note">Available locally</p><div className="model-list">{models.length ? models.map((model) => <span key={model.id} className={model.compatible ? "model-chip" : "model-chip unavailable"} title={model.compatible ? model.id : `Not built for ${architectureLabel}`}>{model.name}</span>) : <span className="config-note">No models downloaded yet.</span>}</div><div className="run-inference"><h2>Run inference</h2><p className="config-note">Assign a model to each camera to overlay live detections.</p>{savedCameras.length ? savedCameras.map((camera) => {
+          const assignment = assignmentFor(camera.id);
+          return <div key={camera.id} className="camera-inference-row">
+            <div className="upload-control">
+              <span className="switch-label">{camera.name}</span>
+              <label className="switch"><input type="checkbox" checked={assignment?.enabled || Boolean(inferenceOpen[camera.id])} onChange={() => {
+                if (assignment?.enabled) { assignModel(camera.id, { enabled: false }); setInferenceOpen((current) => ({ ...current, [camera.id]: false })); return; }
+                setInferenceOpen((current) => ({ ...current, [camera.id]: !current[camera.id] }));
+              }} aria-label={`Run inference for ${camera.name}`} /><span className="switch-track"></span></label>
+              <span className="inference-time">{assignment?.inference_ms != null ? `${assignment.inference_ms.toFixed(1)} ms` : "-- ms"}</span>
+            </div>
+            {(assignment?.enabled || inferenceOpen[camera.id]) && <select className="model-select" value={assignment?.model_id ?? ""} onChange={(event) => assignModel(camera.id, { model_id: event.target.value || null, enabled: Boolean(event.target.value) })} aria-label={`Edge Impulse model for ${camera.name}`}>
+              <option value="">Select a model</option>
+              {models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}
+            </select>}
+            {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
+          </div>;
+        }) : <p className="config-note">No cameras selected yet.</p>}</div><div className="data-collection"><h2>Data collection</h2><p className="config-note">Save a snapshot from a selected camera to the connected project's training set.</p>{savedCameras.length ? savedCameras.map((camera) => {
+          const assignment = assignmentFor(camera.id);
+          return <div key={camera.id} className="upload-control">
+            <span className="switch-label">{camera.name}</span>
+            <button type="button" className="secondary-button" onClick={() => uploadNow(camera.id)}>Save image</button>
+            {assignment?.upload_error && <p className="inference-error">{assignment.upload_error}</p>}
+          </div>;
+        }) : <p className="config-note">No cameras selected yet.</p>}</div></div>}</section>
+      </aside>
+      </div>
+      <section className="camera-column" aria-label="Selected camera views"><section className="camera-section">{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {
         return <figure className="camera-card" key={camera.id}>
           <img src={`/api/cameras/${encodeURIComponent(camera.id)}/stream`} alt={`${camera.name} live view`} />
           <figcaption>{camera.name}</figcaption>
-          <div className="camera-inference">
-            <select value={assignment?.model_id ?? ""} onChange={(event) => assignModel(camera.id, { model_id: event.target.value || null })} aria-label={`Edge Impulse model for ${camera.name}`}>
-              <option value="">No model</option>
-              {models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}
-            </select>
-            <div className="inference-control">
-              <button className="inference-toggle" type="button" aria-pressed={assignment?.enabled ?? false} disabled={!assignment?.model_id} onClick={() => assignModel(camera.id, { enabled: !(assignment?.enabled ?? false) })}>{assignment?.enabled ? "Inference on" : "Inference off"}</button>
-              <span className="inference-time">{assignment?.inference_ms != null ? `${assignment.inference_ms.toFixed(1)} ms` : "-- ms"}</span>
-            </div>
-            {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
-          </div>
         </figure>;
       })}</div> : <p className="muted">No cameras selected yet. Open Add cameras to choose your views.</p>}</section></section>
-      <section className="telemetry-column" aria-label="Live robot telemetry"><section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section><RobotTelemetry active={operationActive} /></section>
+      <section className="telemetry-column" aria-label="Live robot telemetry"><RobotTelemetry active={operationActive} /></section>
     </div>
     {robotSetupOpen && <CalibrationPanel role={calibrationRole} setRole={setCalibrationRole} session={session} ports={ports} portFinderMessage={portFinderMessage} startPortScan={beginPortFinder} viewPort={scanPortChange} selectPort={selectPort} calibration={calibration} importCalibration={importCalibration} state={calibrationSession} start={startCalibration} action={calibrationAction} mode={robotSetupMode} profileName={draftProfileName} setProfileName={setDraftProfileName} saveProfile={saveRobotProfile} close={() => setRobotSetupOpen(false)} cameras={cameras} cameraSetupOpen={cameraSetupOpen} setCameraSetupOpen={setCameraSetupOpen} updateCamera={updateCamera} saveCameras={saveCameras} busy={busy} />}
   </main>;

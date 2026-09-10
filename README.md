@@ -180,6 +180,15 @@ The detected architecture is reported by `GET /api/edge-impulse/architecture`. C
 
 The API key is stored by the backend in the demo root at `.edge_impulse_config.json` (or the path set by `LEROBOT_EI_CONFIG`) with `0600` file permissions. This file is ignored by git. The configuration rail loads the saved key when the app starts and saves it after connecting. Use a device configuration service instead for unattended booth deployments with centralized secret management.
 
+### Uploading data to Edge Impulse
+
+The Data collection section (in the Edge Impulse card) has a **Save image** button per selected camera, regardless of whether a model is assigned. It pushes the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key. Every upload is unlabeled (`x-no-label: 1`) and tagged with `x-metadata` (`{"source": "SO101-<camera>-camera"}`):
+
+- **Object detection models (excluding FOMO)**: the current frame's detections are also sent as an `x-bounding-boxes` header (a JSON array of `{label, x, y, width, height}` objects), which Edge Impulse attaches to the sample as real per-box annotations.
+- **FOMO models, classification models, no model assigned, or frames with no detections**: only the image is uploaded, with no bounding boxes.
+
+Uploads always target the `training` category. `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
+
 ## Development
 
 Backend files live in `lerobot_ei_demo/`. The frontend is a React/Vite application in `lerobot_ei_demo/frontend/`.
@@ -245,6 +254,7 @@ GET  /api/edge-impulse/download/{job_id}
 GET  /api/inference/status
 POST /api/inference/assign            { camera_id, model_id, enabled, confidence }
 POST /api/inference/stop              ?camera_id=
+POST /api/inference/upload            ?camera_id=
 ```
 
 The telemetry stream publishes normalized joint names:

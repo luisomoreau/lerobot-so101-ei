@@ -84,5 +84,5 @@ function JointChart({ samples }: { samples: JointSample[] }) {
 export function RobotTelemetry({ active }: { active: boolean }) {
   const samples = useJointTelemetry(active);
   const latest = samples.at(-1);
-  return <section className="telemetry-grid"><div><div className="panel-heading"><span>Live SO-101 model</span><small>{latest ? "STREAMING" : "WAITING FOR TELEMETRY"}</small></div><RobotScene sample={latest} /></div><div><div className="panel-heading"><span>Joint encoder timeline</span><small>{samples.length} samples</small></div><JointChart samples={samples} /></div></section>;
+  return <section className="telemetry-grid"><div className="telemetry-panel"><div className="panel-heading"><span>Live SO-101 model</span><small>{latest ? "STREAMING" : "WAITING FOR TELEMETRY"}</small></div><RobotScene sample={latest} /></div><div className="telemetry-panel dark"><div className="panel-heading"><span>Joint encoder timeline</span><small>{samples.length} samples</small></div><JointChart samples={samples} /></div></section>;
 }

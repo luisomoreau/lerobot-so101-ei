@@ -29,13 +29,13 @@ FRONTEND_DIST = FRONTEND_ROOT / "dist"
 app = FastAPI(title="LeRobot + Edge Impulse Demo")
 session = RobotSession()
 model_catalog = ModelCatalog()
-inference = InferenceService(model_catalog)
+app_config = AppConfig()
+inference = InferenceService(model_catalog, app_config)
 downloads = edge_impulse.DownloadManager(model_catalog.root)
 telemetry = TelemetryHub()
 controller = LeRobotController(telemetry.publish)
 camera_registry = CameraRegistry()
 camera_streams = CameraStreamRegistry()
-app_config = AppConfig()
 calibration_service = CalibrationService()
 _default_profiles = list_robot_profiles()
 if _default_profiles and _default_profiles[0].get("cameras"):
@@ -171,7 +171,11 @@ def select_robot_profile(selection: RobotProfileSelection) -> dict:
             )
     if configured:
         camera_registry.configure(configured)
-    return {"profile": profile, "session": session.snapshot(), "cameras": camera_registry.all()}
+    return {
+        "profile": profile,
+        "session": session.snapshot(),
+        "cameras": camera_registry.all(),
+    }
 
 
 @app.get("/api/ports")
@@ -255,11 +259,15 @@ def download_calibration(role: str) -> FileResponse:
         else None
     )
     if relative_path is None:
-        raise HTTPException(status_code=422, detail="Calibration role must be leader or follower")
+        raise HTTPException(
+            status_code=422, detail="Calibration role must be leader or follower"
+        )
     path = Path.home() / ".cache/huggingface/lerobot/calibration" / relative_path
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Calibration file is not present")
-    return FileResponse(path, filename=f"SO101-{role}.json", media_type="application/json")
+    return FileResponse(
+        path, filename=f"SO101-{role}.json", media_type="application/json"
+    )
 
 
 @app.get("/api/calibration/session")
@@ -449,6 +457,14 @@ def assign_inference(assignment: InferenceAssignment) -> dict[str, object]:
 @app.post("/api/inference/stop")
 def stop_inference(camera_id: str | None = None) -> dict[str, object]:
     return inference.clear(camera_id)
+
+
+@app.post("/api/inference/upload")
+def upload_inference_frame(camera_id: str) -> dict[str, object]:
+    try:
+        return inference.upload_now(camera_id)
+    except RuntimeError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get("/")
