@@ -504,3 +504,19 @@ def test_joint_data_websocket_sends_timestamped_samples(monkeypatch) -> None:
         "gripper",
     }
     assert isinstance(sample["timestamp"], float)
+
+
+def test_game_start_stop_and_status_round_trip() -> None:
+    response = client.post(
+        "/api/game/start",
+        json={"camera_id": "opencv:0", "circle_count": 2, "duration_s": 45},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == 2
+
+    status = client.get("/api/game/status").json()
+    assert status["active"] is True
+    assert status["camera_id"] == "opencv:0"
+
+    stopped = client.post("/api/game/stop").json()
+    assert stopped == {"active": False, "finished": False}

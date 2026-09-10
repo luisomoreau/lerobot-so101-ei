@@ -13,6 +13,8 @@ type EiConfig = { api_key: string; project_id: number | null };
 type CameraInference = { camera_id: string; model_id: string | null; enabled: boolean; confidence: number; status: string; error: string | null; inference_ms: number | null; last_upload_at: number | null; last_upload_status: string | null; upload_error: string | null };
 type InferenceStatus = { architecture: Architecture; models: EiModel[]; cameras: CameraInference[] };
 type DownloadJob = { id: string; status: string; model: string | null; error: string | null };
+type GameCircle = { id: number; x: number; y: number; radius: number; hit: boolean };
+type GameStatus = { active: boolean; finished: boolean; camera_id?: string; circles?: GameCircle[]; remaining_s?: number; duration_s?: number; score?: number; total?: number };
 type CalibrationRole = "leader" | "follower";
 type RobotProfile = { name: string; leader_port: string; follower_port: string; cameras: Array<{ name: string; camera_index: number }> };
 type CalibrationSession = { status: string; role: CalibrationRole | null; phase: string | null; positions: Record<string, number> | null; ranges: Record<string, { min: number; max: number }> | null; message: string; error: string | null };
@@ -84,6 +86,11 @@ function App() {
   const [eiTarget, setEiTarget] = useState("");
   const [inference, setInference] = useState<InferenceStatus | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [playCardOpen, setPlayCardOpen] = useState(false);
+  const [gameCameraId, setGameCameraId] = useState("");
+  const [gameCircleCount, setGameCircleCount] = useState(3);
+  const [gameDuration, setGameDuration] = useState(60);
+  const [gameStatus, setGameStatus] = useState<GameStatus>({ active: false, finished: false });
   const [status, setStatus] = useState("Loading booth setup...");
   const [busy, setBusy] = useState(false);
 
@@ -118,6 +125,14 @@ function App() {
     const interval = window.setInterval(refreshInference, 1000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!gameStatus.active) return;
+    const interval = window.setInterval(() => {
+      request<GameStatus>("/api/game/status").then(setGameStatus).catch(() => undefined);
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [gameStatus.active]);
 
   async function connectEdgeImpulse() {
     setBusy(true);
@@ -180,6 +195,18 @@ function App() {
     try {
       setInference(await postJson<InferenceStatus>(`/api/inference/upload?camera_id=${encodeURIComponent(cameraId)}`, {}));
       setStatus(`Uploaded a frame from ${cameraId} to Edge Impulse`);
+    } catch (error) { setStatus((error as Error).message); }
+  }
+
+  async function startGame() {
+    try {
+      setGameStatus(await postJson<GameStatus>("/api/game/start", { camera_id: gameCameraId, circle_count: gameCircleCount, duration_s: gameDuration }));
+    } catch (error) { setStatus((error as Error).message); }
+  }
+
+  async function stopGame() {
+    try {
+      setGameStatus(await postJson<GameStatus>("/api/game/stop", {}));
     } catch (error) { setStatus((error as Error).message); }
   }
 
@@ -348,6 +375,9 @@ function App() {
             {assignment?.upload_error && <p className="inference-error">{assignment.upload_error}</p>}
           </div>;
         }) : <p className="config-note">No cameras selected yet.</p>}</div></div>}</section>
+      </aside>
+      <aside className="config-panel config-panel--flat" aria-label="Play">
+        <section className="config-section"><button type="button" className="collapsible-toggle" onClick={() => setPlayCardOpen((open) => !open)} aria-expanded={playCardOpen}><h2>Play</h2><span className={`collapsible-caret${playCardOpen ? " open" : ""}`} aria-hidden="true">›</span></button>{playCardOpen && <div className="collapsible-body"><p className="config-note">Place an object inside each red circle before the timer runs out. A circle turns green once something is detected inside it.</p><label>Camera<select value={gameCameraId} onChange={(event) => setGameCameraId(event.target.value)} disabled={gameStatus.active}><option value="">Select a camera</option>{savedCameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}</select></label><label>Circles<input type="number" min={1} max={8} step={1} value={gameCircleCount} onChange={(event) => setGameCircleCount(Number(event.target.value) || 1)} disabled={gameStatus.active} /></label><label>Duration (sec)<input type="number" min={5} step={5} value={gameDuration} onChange={(event) => setGameDuration(Number(event.target.value) || 60)} disabled={gameStatus.active} /></label>{gameStatus.active ? <><p className="config-note">Time left: {gameStatus.remaining_s}s &middot; Score: {gameStatus.score}/{gameStatus.total}</p><button type="button" className="secondary-button" onClick={stopGame}>Stop game</button></> : <button type="button" onClick={startGame} disabled={!gameCameraId}>Start game</button>}{gameStatus.finished && !gameStatus.active && gameStatus.total ? <p className="config-note">Game over! Score: {gameStatus.score}/{gameStatus.total}</p> : null}</div>}</section>
       </aside>
       </div>
       <section className="camera-column" aria-label="Selected camera views"><section className="camera-section">{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {

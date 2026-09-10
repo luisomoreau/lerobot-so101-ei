@@ -205,9 +205,15 @@ class ModelCatalog:
 class InferenceService:
     """Tracks which Edge Impulse model is bound to each camera stream."""
 
-    def __init__(self, catalog: ModelCatalog, app_config: Any | None = None) -> None:
+    def __init__(
+        self,
+        catalog: ModelCatalog,
+        app_config: Any | None = None,
+        game: Any | None = None,
+    ) -> None:
         self.catalog = catalog
         self.app_config = app_config
+        self.game = game
         self._lock = Lock()
         self._assignments: dict[str, CameraInference] = {}
         self._runners: dict[str, RunnerState] = {}
@@ -364,16 +370,17 @@ class InferenceService:
     def annotate(self, camera_id: str, frame: Any) -> Any:
         import cv2
 
+        detections: list[dict[str, Any]] = []
         with self._lock:
             self._last_frames[camera_id] = frame.copy()
             assignment = self._assignments.get(camera_id)
             if assignment is None or not assignment.enabled or not assignment.model_id:
                 self._last_detections.pop(camera_id, None)
                 self._last_model.pop(camera_id, None)
-                return frame
+                return self._apply_game(camera_id, frame, detections)
             model = self.catalog.find(assignment.model_id)
         if model is None:
-            return frame
+            return self._apply_game(camera_id, frame, detections)
         try:
             runner = self._runner_for(model)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -448,4 +455,11 @@ class InferenceService:
                 if current is not None:
                     current.status = "error"
                     current.error = str(error)
-        return frame
+        return self._apply_game(camera_id, frame, detections)
+
+    def _apply_game(
+        self, camera_id: str, frame: Any, detections: list[dict[str, Any]]
+    ) -> Any:
+        if self.game is None:
+            return frame
+        return self.game.apply(camera_id, frame, detections)

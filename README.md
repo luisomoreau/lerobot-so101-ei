@@ -189,6 +189,10 @@ The Data collection section (in the Edge Impulse card) has a **Save image** butt
 
 Uploads always target the `training` category. `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
 
+### Play: circle-placement game
+
+The **Play** card (below Edge Impulse) runs a small gamified challenge. Pick a camera, a circle count (default 3), and a duration (default 60s), then **Start game**: the backend scatters that many red circles (as fractions of the frame size) and draws them directly onto that camera's MJPEG stream via `InferenceService.annotate()`, so no separate frontend overlay is needed. Each frame, `GameService.apply()` checks whether any of the camera's current object-detection detections fall inside a circle's radius; matching circles turn green and stay that way. The game ends (reported via `finished`) once every circle is hit or the timer runs out, and the final score (circles hit / total) is shown in the Play card. This requires the selected camera to have an active, enabled object-detection model assignment (see "Run inference") — without detections, circles will never turn green.
+
 ## Development
 
 Backend files live in `lerobot_ei_demo/`. The frontend is a React/Vite application in `lerobot_ei_demo/frontend/`.
@@ -255,6 +259,9 @@ GET  /api/inference/status
 POST /api/inference/assign            { camera_id, model_id, enabled, confidence }
 POST /api/inference/stop              ?camera_id=
 POST /api/inference/upload            ?camera_id=
+POST /api/game/start                  { camera_id, circle_count, duration_s }
+POST /api/game/stop
+GET  /api/game/status
 ```
 
 The telemetry stream publishes normalized joint names:
