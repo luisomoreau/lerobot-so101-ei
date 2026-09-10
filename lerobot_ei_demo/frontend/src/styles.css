@@ -22,6 +22,11 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .config-section:last-child { border-bottom: 0; }
 .config-section h2 { margin: 0; }
 .config-note { margin: 0; color: #80908a; font-size: .78rem; line-height: 1.4; }
+.collapsible-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.collapsible-toggle h2 { margin: 0; }
+.collapsible-caret { display: inline-flex; color: #80908a; font-size: 1.1rem; transition: transform .15s ease; }
+.collapsible-caret.open { transform: rotate(90deg); }
+.collapsible-body { display: grid; gap: .8rem; }
 .calibration-status { display: grid; gap: .35rem; font-size: .7rem; font-weight: 700; }
 .calibration-status .ready { color: #55a76b; }
 .calibration-status .missing { color: #d93b32; }
