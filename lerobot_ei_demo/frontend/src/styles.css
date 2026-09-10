@@ -23,7 +23,8 @@ p { max-width: 590px; color: #63736d; font: 1.05rem/1.5 "Avenir Next", sans-seri
 .config-section:last-child { border-bottom: 0; }
 .config-section h2 { margin: 0; }
 .config-note { margin: 0; color: #80908a; font-size: .78rem; line-height: 1.4; }
-.collapsible-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.collapsible-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.collapsible-toggle:hover { background: none; }
 .collapsible-toggle h2 { margin: 0; }
 .collapsible-caret { display: inline-flex; color: #80908a; font-size: 1.1rem; transition: transform .15s ease; }
 .collapsible-caret.open { transform: rotate(90deg); }
@@ -76,7 +77,7 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .switch input:checked + .switch-track::after { transform: translateX(1.1rem); }
 .switch input:focus-visible + .switch-track { outline: 2px solid #173b68; outline-offset: 2px; }
 .switch-label { font: 700 .75rem "Arial Narrow", sans-serif; color: #40514b; }
-.upload-control { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid #d9e4df; border-radius: 8px; background: #f6f8f5; }
+.upload-control { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: 0; border: 0; background: none; }
 .upload-interval { width: 4rem; min-height: 2rem; padding: 0 .5rem; text-align: center; }
 .upload-control button { min-height: 2rem; padding: 0 .6rem; font-size: .68rem; }
 .inference-time { min-width: 4.2rem; color: #40514b; font: 700 .75rem "Arial Narrow", sans-serif; text-align: right; }
