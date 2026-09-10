@@ -4,7 +4,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from threading import Event, Lock, Thread
+from threading import Lock
 from typing import Any
 
 from lerobot_ei_demo import ingestion
@@ -28,8 +28,6 @@ class CameraInference:
     status: str = "idle"
     error: str | None = None
     inference_ms: float | None = None
-    upload_enabled: bool = False
-    upload_interval_s: float = 5.0
     last_upload_at: float | None = None
     last_upload_status: str | None = None
     upload_error: str | None = None
@@ -216,11 +214,6 @@ class InferenceService:
         self._last_frames: dict[str, Any] = {}
         self._last_detections: dict[str, list[dict[str, Any]]] = {}
         self._last_model: dict[str, dict[str, Any]] = {}
-        self._upload_stop = Event()
-        self._upload_thread = Thread(
-            target=self._upload_loop, name="ei-upload", daemon=True
-        )
-        self._upload_thread.start()
 
     def status(self) -> dict[str, object]:
         with self._lock:
@@ -275,21 +268,6 @@ class InferenceService:
                 runners = []
         for runner in runners:
             runner.runner.stop()
-        return self.status()
-
-    def set_upload(
-        self, camera_id: str, enabled: bool, interval_s: float | None = None
-    ) -> dict[str, object]:
-        with self._lock:
-            assignment = self._assignments.setdefault(
-                camera_id, CameraInference(camera_id=camera_id)
-            )
-            assignment.upload_enabled = enabled
-            if interval_s is not None:
-                assignment.upload_interval_s = max(1.0, float(interval_s))
-            if not enabled:
-                assignment.last_upload_status = None
-                assignment.upload_error = None
         return self.status()
 
     def upload_now(self, camera_id: str) -> dict[str, object]:
@@ -358,29 +336,6 @@ class InferenceService:
             assignment.last_upload_status = "ok"
             assignment.upload_error = None
         return self.status()
-
-    def _upload_loop(self) -> None:
-        while not self._upload_stop.is_set():
-            due = []
-            with self._lock:
-                now = time.time()
-                for camera_id, assignment in self._assignments.items():
-                    if not assignment.upload_enabled:
-                        continue
-                    last = assignment.last_upload_at or 0
-                    if now - last >= assignment.upload_interval_s:
-                        due.append(camera_id)
-            for camera_id in due:
-                try:
-                    self.upload_now(camera_id)
-                except Exception as error:  # noqa: BLE001 - keep the loop alive
-                    with self._lock:
-                        assignment = self._assignments.get(camera_id)
-                        if assignment is not None:
-                            assignment.last_upload_at = time.time()
-                            assignment.last_upload_status = "error"
-                            assignment.upload_error = str(error)
-            self._upload_stop.wait(1.0)
 
     def _runner_for(self, model: dict[str, str | bool]) -> RunnerState:
         model_id = str(model["id"])

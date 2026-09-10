@@ -67,12 +67,6 @@ class InferenceAssignment(BaseModel):
     confidence: float = 0.5
 
 
-class UploadConfig(BaseModel):
-    camera_id: str
-    enabled: bool = False
-    interval_s: float | None = None
-
-
 class EdgeImpulseCredentials(BaseModel):
     api_key: str = Field(min_length=1)
     project_id: int | None = None
@@ -463,11 +457,6 @@ def assign_inference(assignment: InferenceAssignment) -> dict[str, object]:
 @app.post("/api/inference/stop")
 def stop_inference(camera_id: str | None = None) -> dict[str, object]:
     return inference.clear(camera_id)
-
-
-@app.post("/api/inference/upload-config")
-def configure_inference_upload(config: UploadConfig) -> dict[str, object]:
-    return inference.set_upload(config.camera_id, config.enabled, config.interval_s)
 
 
 @app.post("/api/inference/upload")

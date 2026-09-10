@@ -141,20 +141,6 @@ def test_inference_model_lifecycle(tmp_path, monkeypatch) -> None:
     assert response.json()["cameras"] == []
 
 
-def test_upload_config_creates_assignment_lazily() -> None:
-    response = client.post(
-        "/api/inference/upload-config",
-        json={"camera_id": "opencv:99", "enabled": True, "interval_s": 10},
-    )
-
-    assert response.status_code == 200
-    cameras = {entry["camera_id"]: entry for entry in response.json()["cameras"]}
-    assert cameras["opencv:99"]["upload_enabled"] is True
-    assert cameras["opencv:99"]["upload_interval_s"] == 10
-
-    client.post("/api/inference/stop")
-
-
 def test_upload_now_requires_recent_frame(tmp_path, monkeypatch) -> None:
     model = tmp_path / f"model-{host_architecture()['architecture']}.eim"
     model.write_bytes(b"stub")

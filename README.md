@@ -182,12 +182,12 @@ The API key is stored by the backend in the demo root at `.edge_impulse_config.j
 
 ### Uploading data to Edge Impulse
 
-Every camera card has an **Auto-upload every N sec** switch plus an **Upload now** button, regardless of whether a model is assigned. Both push the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key. Every upload is unlabeled (`x-no-label: 1`) and tagged with `x-metadata` (`{"source": "SO101-<camera>-camera"}`):
+The Data collection section (in the Edge Impulse card) has a **Save image** button per selected camera, regardless of whether a model is assigned. It pushes the camera's current frame to the connected project's `training` set via the [Edge Impulse Ingestion API](https://docs.edgeimpulse.com/apis/ingestion), using the stored API key. Every upload is unlabeled (`x-no-label: 1`) and tagged with `x-metadata` (`{"source": "SO101-<camera>-camera"}`):
 
 - **Object detection models (excluding FOMO)**: the current frame's detections are also sent as an `x-bounding-boxes` header (a JSON array of `{label, x, y, width, height}` objects), which Edge Impulse attaches to the sample as real per-box annotations.
 - **FOMO models, classification models, no model assigned, or frames with no detections**: only the image is uploaded, with no bounding boxes.
 
-Uploads always target the `training` category. Enabling the switch starts a background loop (checked every second) that uploads once the configured interval has elapsed; `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
+Uploads always target the `training` category. `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
 
 ## Development
 
@@ -254,7 +254,6 @@ GET  /api/edge-impulse/download/{job_id}
 GET  /api/inference/status
 POST /api/inference/assign            { camera_id, model_id, enabled, confidence }
 POST /api/inference/stop              ?camera_id=
-POST /api/inference/upload-config     { camera_id, enabled, interval_s }
 POST /api/inference/upload            ?camera_id=
 ```
 

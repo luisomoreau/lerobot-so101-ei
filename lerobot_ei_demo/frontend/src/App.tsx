@@ -10,7 +10,7 @@ type EiExperiment = { id: number; name: string };
 type EiTarget = { format: string; name: string; description: string; compatible: boolean };
 type EiModel = { id: string; name: string; path: string; compatible: boolean };
 type EiConfig = { api_key: string; project_id: number | null };
-type CameraInference = { camera_id: string; model_id: string | null; enabled: boolean; confidence: number; status: string; error: string | null; inference_ms: number | null; upload_enabled: boolean; upload_interval_s: number; last_upload_at: number | null; last_upload_status: string | null; upload_error: string | null };
+type CameraInference = { camera_id: string; model_id: string | null; enabled: boolean; confidence: number; status: string; error: string | null; inference_ms: number | null; last_upload_at: number | null; last_upload_status: string | null; upload_error: string | null };
 type InferenceStatus = { architecture: Architecture; models: EiModel[]; cameras: CameraInference[] };
 type DownloadJob = { id: string; status: string; model: string | null; error: string | null };
 type CalibrationRole = "leader" | "follower";
@@ -173,18 +173,6 @@ function App() {
     try {
       setInference(await postJson<InferenceStatus>("/api/inference/assign", body));
       setStatus(body.enabled ? `Inference enabled on ${cameraId}` : `Inference off on ${cameraId}`);
-    } catch (error) { setStatus((error as Error).message); }
-  }
-
-  async function configureUpload(cameraId: string, patch: { enabled?: boolean; interval_s?: number }) {
-    const current = assignmentFor(cameraId);
-    const body = {
-      camera_id: cameraId,
-      enabled: patch.enabled !== undefined ? patch.enabled : current?.upload_enabled ?? false,
-      interval_s: patch.interval_s !== undefined ? patch.interval_s : current?.upload_interval_s ?? 5,
-    };
-    try {
-      setInference(await postJson<InferenceStatus>("/api/inference/upload-config", body));
     } catch (error) { setStatus((error as Error).message); }
   }
 
@@ -352,13 +340,10 @@ function App() {
             </select>}
             {assignment?.status === "error" && assignment.error && <p className="inference-error">{assignment.error}</p>}
           </div>;
-        }) : <p className="config-note">No cameras selected yet.</p>}</div><div className="data-collection"><h2>Data collection</h2><p className="config-note">Auto-upload frames from selected cameras to the connected project's training set.</p>{savedCameras.length ? savedCameras.map((camera) => {
+        }) : <p className="config-note">No cameras selected yet.</p>}</div><div className="data-collection"><h2>Data collection</h2><p className="config-note">Save a snapshot from a selected camera to the connected project's training set.</p>{savedCameras.length ? savedCameras.map((camera) => {
           const assignment = assignmentFor(camera.id);
           return <div key={camera.id} className="upload-control">
             <span className="switch-label">{camera.name}</span>
-            <label className="switch"><input type="checkbox" checked={assignment?.upload_enabled ?? false} onChange={() => configureUpload(camera.id, { enabled: !(assignment?.upload_enabled ?? false) })} aria-label={`Auto-upload ${camera.name} to Edge Impulse`} /><span className="switch-track"></span></label>
-            <input className="upload-interval" type="number" min={1} step={1} value={assignment?.upload_interval_s ?? 5} onChange={(event) => configureUpload(camera.id, { interval_s: Number(event.target.value) || 1 })} aria-label={`Upload interval in seconds for ${camera.name}`} />
-            <span className="config-note">sec</span>
             <button type="button" className="secondary-button" onClick={() => uploadNow(camera.id)}>Save image</button>
             {assignment?.upload_error && <p className="inference-error">{assignment.upload_error}</p>}
           </div>;
