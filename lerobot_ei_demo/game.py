@@ -77,8 +77,7 @@ class GameService:
             if self._camera_id is None:
                 return {"active": False, "finished": False}
             remaining = max(0.0, self._duration_s - (time.time() - self._started_at))
-            all_hit = self._placed and all(c.hit for c in self._circles)
-            finished = self._finished or remaining <= 0 or all_hit
+            finished = self._finished or remaining <= 0
             self._finished = finished
             score = sum(1 for c in self._circles if c.hit)
             return {
@@ -110,24 +109,28 @@ class GameService:
         import cv2
 
         with self._lock:
-            if self._camera_id != camera_id or self._finished:
+            if self._camera_id != camera_id:
                 return frame
             if not self._placed:
                 self._circles = self._place_circles(zone)
                 self._placed = True
+            if time.time() - self._started_at >= self._duration_s:
+                self._finished = True
             frame_height, frame_width = frame.shape[:2]
             min_dim = min(frame_width, frame_height)
-            for detection in detections:
-                cx = detection["x"] + detection.get("width", 0) / 2
-                cy = detection["y"] + detection.get("height", 0) / 2
+            if not self._finished:
                 for circle in self._circles:
-                    if circle.hit:
-                        continue
                     circle_cx = circle.x * frame_width
                     circle_cy = circle.y * frame_height
                     circle_r = circle.radius * min_dim
-                    if (cx - circle_cx) ** 2 + (cy - circle_cy) ** 2 <= circle_r**2:
-                        circle.hit = True
+                    circle.hit = any(
+                        (detection["x"] + detection.get("width", 0) / 2 - circle_cx)
+                        ** 2
+                        + (detection["y"] + detection.get("height", 0) / 2 - circle_cy)
+                        ** 2
+                        <= circle_r**2
+                        for detection in detections
+                    )
             for circle in self._circles:
                 center = (round(circle.x * frame_width), round(circle.y * frame_height))
                 radius = round(circle.radius * min_dim)

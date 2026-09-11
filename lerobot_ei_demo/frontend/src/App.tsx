@@ -88,6 +88,7 @@ function App() {
   const [downloading, setDownloading] = useState(false);
   const [playCardOpen, setPlayCardOpen] = useState(false);
   const [gameCameraId, setGameCameraId] = useState("");
+  const [gameModelId, setGameModelId] = useState("");
   const [gameCircleCount, setGameCircleCount] = useState(3);
   const [gameDuration, setGameDuration] = useState(60);
   const [gameStatus, setGameStatus] = useState<GameStatus>({ active: false, finished: false });
@@ -200,7 +201,8 @@ function App() {
 
   async function startGame() {
     try {
-      setGameStatus(await postJson<GameStatus>("/api/game/start", { camera_id: gameCameraId, circle_count: gameCircleCount, duration_s: gameDuration }));
+      setGameStatus(await postJson<GameStatus>("/api/game/start", { camera_id: gameCameraId, model_id: gameModelId, circle_count: gameCircleCount, duration_s: gameDuration }));
+      setInference(await request<InferenceStatus>("/api/inference/status"));
     } catch (error) { setStatus((error as Error).message); }
   }
 
@@ -343,7 +345,7 @@ function App() {
 
   return <main>
     <header><div><div className="brand-lockup" aria-label="Arduino, Edge Impulse, and LeRobot"><img src="/assets/arduino.svg" alt="Arduino" /><span>+</span><img src="/assets/edge-impulse.svg" alt="Edge Impulse" /><span>+</span><img className="lerobot-logo" src="/assets/lerobot.png" alt="LeRobot" /></div><h1>Teleoperated Arm</h1><p>Prepare the SO-101, then move into a local robotics session. Perception stays on the VENTUNO Q while the arm remains responsive.</p></div></header>
-    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button><div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
+    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button>{gameStatus.camera_id && <div className="game-actions"><span>{gameStatus.active ? `${Math.ceil(gameStatus.remaining_s ?? 0)}s` : "Time up"} · Score: {gameStatus.score}/{gameStatus.total}</span><button type="button" onClick={startGame} disabled={!gameCameraId || !gameModelId}>Replay</button><button type="button" className="secondary-button" onClick={stopGame}>Stop game</button></div>}<div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
     <div className="app-layout">
       <div className="config-column">
       <aside className="config-panel" aria-label="Robot setup">
@@ -377,7 +379,7 @@ function App() {
         }) : <p className="config-note">No cameras selected yet.</p>}</div></div>}</section>
       </aside>
       <aside className="config-panel config-panel--flat" aria-label="Play">
-        <section className="config-section"><button type="button" className="collapsible-toggle" onClick={() => setPlayCardOpen((open) => !open)} aria-expanded={playCardOpen}><h2>Play</h2><span className={`collapsible-caret${playCardOpen ? " open" : ""}`} aria-hidden="true">›</span></button>{playCardOpen && <div className="collapsible-body"><p className="config-note">Place an object inside each red circle before the timer runs out. A circle turns green once something is detected inside it.</p><label>Camera<select value={gameCameraId} onChange={(event) => setGameCameraId(event.target.value)} disabled={gameStatus.active}><option value="">Select a camera</option>{savedCameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}</select></label><label>Circles<input type="number" min={1} max={8} step={1} value={gameCircleCount} onChange={(event) => setGameCircleCount(Number(event.target.value) || 1)} disabled={gameStatus.active} /></label><label>Duration (sec)<input type="number" min={5} step={5} value={gameDuration} onChange={(event) => setGameDuration(Number(event.target.value) || 60)} disabled={gameStatus.active} /></label>{gameStatus.active ? <><p className="config-note">Time left: {gameStatus.remaining_s}s &middot; Score: {gameStatus.score}/{gameStatus.total}</p><button type="button" className="secondary-button" onClick={stopGame}>Stop game</button></> : <button type="button" onClick={startGame} disabled={!gameCameraId}>Start game</button>}{gameStatus.finished && !gameStatus.active && gameStatus.total ? <p className="config-note">Game over! Score: {gameStatus.score}/{gameStatus.total}</p> : null}</div>}</section>
+        <section className="config-section"><button type="button" className="collapsible-toggle" onClick={() => setPlayCardOpen((open) => !open)} aria-expanded={playCardOpen}><h2>Play</h2><span className={`collapsible-caret${playCardOpen ? " open" : ""}`} aria-hidden="true">›</span></button>{playCardOpen && <div className="collapsible-body"><p className="config-note">Place an object inside each red circle before the timer runs out. A circle turns green while an object is detected inside it. Starting the game stops any other running inference and assigns the selected model to the chosen camera.</p><label>Camera<select value={gameCameraId} onChange={(event) => setGameCameraId(event.target.value)} disabled={gameStatus.active}><option value="">Select a camera</option>{savedCameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}</select></label><label>Model<select value={gameModelId} onChange={(event) => setGameModelId(event.target.value)} disabled={gameStatus.active}><option value="">Select an object detection model</option>{models.map((model) => <option key={model.id} value={model.id} disabled={!model.compatible}>{model.name}{model.compatible ? "" : " — incompatible"}</option>)}</select></label><label>Circles<input type="number" min={1} max={8} step={1} value={gameCircleCount} onChange={(event) => setGameCircleCount(Number(event.target.value) || 1)} disabled={gameStatus.active} /></label><label>Duration (sec)<input type="number" min={5} step={5} value={gameDuration} onChange={(event) => setGameDuration(Number(event.target.value) || 60)} disabled={gameStatus.active} /></label>{!gameStatus.camera_id && <button type="button" onClick={startGame} disabled={!gameCameraId || !gameModelId}>Start game</button>}</div>}</section>
       </aside>
       </div>
       <section className="camera-column" aria-label="Selected camera views"><section className="camera-section">{savedCameras.length ? <div className="cameras">{savedCameras.map((camera) => {
