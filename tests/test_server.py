@@ -427,6 +427,20 @@ def test_cameras_have_stable_identifiers() -> None:
     assert all(camera["id"].startswith("opencv:") for camera in response.json())
 
 
+def test_saved_cameras_do_not_trigger_device_discovery(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server.camera_registry, "path", tmp_path / "cameras.json")
+    server.camera_registry.configure([{"name": "Top", "index": 0, "selected": True}])
+    monkeypatch.setattr(
+        "lerobot_ei_demo.camera_registry.discover_cameras",
+        lambda: (_ for _ in ()).throw(AssertionError("unexpected camera probe")),
+    )
+
+    response = client.get("/api/cameras")
+
+    assert response.status_code == 200
+    assert response.json()[0]["id"] == "opencv:0"
+
+
 def test_invalid_camera_stream_id_is_rejected() -> None:
     response = client.get("/api/cameras/not-a-camera/stream")
 

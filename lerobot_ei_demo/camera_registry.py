@@ -12,6 +12,8 @@ class CameraRegistry:
 
     def all(self) -> list[dict[str, str | bool]]:
         manual = self._read()
+        if manual:
+            return [{**camera, "manual": True} for camera in manual]
         cameras = {
             camera["id"]: {
                 **camera,
