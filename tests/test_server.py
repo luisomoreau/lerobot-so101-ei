@@ -506,13 +506,29 @@ def test_joint_data_websocket_sends_timestamped_samples(monkeypatch) -> None:
     assert isinstance(sample["timestamp"], float)
 
 
-def test_game_start_stop_and_status_round_trip() -> None:
+def test_game_start_stop_and_status_round_trip(tmp_path, monkeypatch) -> None:
+    model = tmp_path / f"model-{host_architecture()['label'].replace('/', '-')}.eim"
+    model.write_bytes(b"stub")
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
+
     response = client.post(
         "/api/game/start",
-        json={"camera_id": "opencv:0", "circle_count": 2, "duration_s": 45},
+        json={
+            "camera_id": "opencv:0",
+            "model_id": model.name,
+            "circle_count": 2,
+            "duration_s": 45,
+        },
     )
     assert response.status_code == 200
     assert response.json()["total"] == 2
+
+    cameras = {
+        entry["camera_id"]: entry
+        for entry in client.get("/api/inference/status").json()["cameras"]
+    }
+    assert cameras["opencv:0"]["model_id"] == model.name
+    assert cameras["opencv:0"]["enabled"] is True
 
     status = client.get("/api/game/status").json()
     assert status["active"] is True
@@ -520,3 +536,38 @@ def test_game_start_stop_and_status_round_trip() -> None:
 
     stopped = client.post("/api/game/stop").json()
     assert stopped == {"active": False, "finished": False}
+
+    client.post("/api/inference/stop")
+
+
+def test_game_start_stops_inference_running_on_other_cameras(
+    tmp_path, monkeypatch
+) -> None:
+    model = tmp_path / f"model-{host_architecture()['label'].replace('/', '-')}.eim"
+    model.write_bytes(b"stub")
+    monkeypatch.setattr(server.model_catalog, "root", tmp_path)
+
+    client.post(
+        "/api/inference/assign",
+        json={"camera_id": "opencv:1", "model_id": model.name, "enabled": True},
+    )
+
+    client.post(
+        "/api/game/start",
+        json={"camera_id": "opencv:0", "model_id": model.name},
+    )
+
+    cameras = {
+        entry["camera_id"]: entry
+        for entry in client.get("/api/inference/status").json()["cameras"]
+    }
+    assert cameras["opencv:1"]["enabled"] is False
+    assert cameras["opencv:0"]["enabled"] is True
+
+    client.post("/api/game/stop")
+    cameras = {
+        entry["camera_id"]: entry
+        for entry in client.get("/api/inference/status").json()["cameras"]
+    }
+    assert cameras["opencv:1"]["enabled"] is True
+    client.post("/api/inference/stop")

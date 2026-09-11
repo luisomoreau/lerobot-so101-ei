@@ -90,6 +90,7 @@ class ModelDownload(BaseModel):
 
 class GameStart(BaseModel):
     camera_id: str
+    model_id: str = Field(min_length=1)
     circle_count: int = 3
     duration_s: float = 60.0
 
@@ -477,17 +478,31 @@ def upload_inference_frame(camera_id: str) -> dict[str, object]:
 
 @app.post("/api/game/start")
 def start_game(config: GameStart) -> dict[str, object]:
+    inference.pause_for_game()
+    try:
+        inference.assign(config.camera_id, config.model_id, True, 0.5)
+    except FileNotFoundError as error:
+        inference.restore_after_game()
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        inference.restore_after_game()
+        raise HTTPException(status_code=409, detail=str(error)) from error
     return game_service.start(config.camera_id, config.circle_count, config.duration_s)
 
 
 @app.post("/api/game/stop")
 def stop_game() -> dict[str, object]:
-    return game_service.stop()
+    status = game_service.stop()
+    inference.restore_after_game()
+    return status
 
 
 @app.get("/api/game/status")
 def game_status() -> dict[str, object]:
-    return game_service.status()
+    status = game_service.status()
+    if status.get("finished"):
+        inference.restore_after_game()
+    return status
 
 
 @app.get("/")

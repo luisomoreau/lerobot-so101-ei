@@ -2,7 +2,7 @@ import os
 import re
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -240,6 +240,7 @@ class InferenceService:
         self.game = game
         self._lock = Lock()
         self._assignments: dict[str, CameraInference] = {}
+        self._pre_game_assignments: dict[str, CameraInference] | None = None
         self._runners: dict[str, RunnerState] = {}
         self._last_frames: dict[str, Any] = {}
         self._last_detections: dict[str, list[dict[str, Any]]] = {}
@@ -496,10 +497,21 @@ class InferenceService:
             return frame
         return self.game.apply(camera_id, frame, detections, zone, captured_at)
 
-    def disable_all(self, except_camera_id: str | None = None) -> None:
-        """Stop any currently-running inference other than `except_camera_id`."""
+    def pause_for_game(self) -> None:
+        """Pause inference assignments until the active game finishes or stops."""
         with self._lock:
-            for camera_id, assignment in self._assignments.items():
-                if camera_id == except_camera_id:
-                    continue
+            if self._pre_game_assignments is None:
+                self._pre_game_assignments = {
+                    camera_id: replace(assignment)
+                    for camera_id, assignment in self._assignments.items()
+                }
+            for assignment in self._assignments.values():
                 assignment.enabled = False
+
+    def restore_after_game(self) -> None:
+        """Restore the inference assignments that were active before the game."""
+        with self._lock:
+            if self._pre_game_assignments is None:
+                return
+            self._assignments = self._pre_game_assignments
+            self._pre_game_assignments = None
