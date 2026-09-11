@@ -11,6 +11,7 @@ from lerobot_ei_demo.calibration import CalibrationService
 from lerobot_ei_demo.camera import CameraStreamRegistry, camera_index, mjpeg_stream
 from lerobot_ei_demo.camera_registry import CameraRegistry
 from lerobot_ei_demo.config import AppConfig
+from lerobot_ei_demo.game import GameService
 from lerobot_ei_demo.hardware import LeRobotController
 from lerobot_ei_demo.session import (
     RobotSession,
@@ -30,7 +31,8 @@ app = FastAPI(title="LeRobot + Edge Impulse Demo")
 session = RobotSession()
 model_catalog = ModelCatalog()
 app_config = AppConfig()
-inference = InferenceService(model_catalog, app_config)
+game_service = GameService()
+inference = InferenceService(model_catalog, app_config, game_service)
 downloads = edge_impulse.DownloadManager(model_catalog.root)
 telemetry = TelemetryHub()
 controller = LeRobotController(telemetry.publish)
@@ -84,6 +86,13 @@ class ModelDownload(BaseModel):
     impulse_id: int | None = None
     model_type: str = "float32"
     engine: str = "tflite"
+
+
+class GameStart(BaseModel):
+    camera_id: str
+    model_id: str = Field(min_length=1)
+    circle_count: int = 3
+    duration_s: float = 60.0
 
 
 class CameraRegistration(BaseModel):
@@ -465,6 +474,35 @@ def upload_inference_frame(camera_id: str) -> dict[str, object]:
         return inference.upload_now(camera_id)
     except RuntimeError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.post("/api/game/start")
+def start_game(config: GameStart) -> dict[str, object]:
+    inference.pause_for_game()
+    try:
+        inference.assign(config.camera_id, config.model_id, True, 0.5)
+    except FileNotFoundError as error:
+        inference.restore_after_game()
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        inference.restore_after_game()
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return game_service.start(config.camera_id, config.circle_count, config.duration_s)
+
+
+@app.post("/api/game/stop")
+def stop_game() -> dict[str, object]:
+    status = game_service.stop()
+    inference.restore_after_game()
+    return status
+
+
+@app.get("/api/game/status")
+def game_status() -> dict[str, object]:
+    status = game_service.status()
+    if status.get("finished"):
+        inference.restore_after_game()
+    return status
 
 
 @app.get("/")

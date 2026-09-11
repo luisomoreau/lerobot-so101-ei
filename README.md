@@ -12,26 +12,32 @@ The app combines:
 - Edge Impulse model downloads filtered by the host architecture
 - A per-camera Edge Impulse model selection with an inference toggle
 - Arduino, Edge Impulse, and LeRobot/LeLab logo lockup in the web app header
-- A left configuration rail for robot, camera, and Edge Impulse settings
+- A left configuration rail with collapsible Robot setup, Edge Impulse, and Play sections
 - Read-only leader/follower calibration readiness status
+- A timed circle-placement game driven by live object detection
 
 ![Demo Overview](docs/app-screenshot.png)
 
 ## Quick Start
 
-Install the hardware-enabled tool from a Git repository. The `[edgeimpulse]` extra pulls in `pyaudio`, which needs the PortAudio system library to build (`brew install portaudio` on macOS shown below):
+You need [uv](https://docs.astral.sh/uv/), Python 3.12, and a connected SO-101 pair only when using teleoperation. The `[edgeimpulse]` extra installs the local Edge Impulse runner. It also installs `pyaudio`, which needs PortAudio available on the host.
+
+### macOS
+
+Install the system prerequisites, create an environment, then install LeRobot and this application. LeRobot stays separate by design; this app does not declare it as a package dependency.
 
 ```bash
-brew install portaudio ffmepg
+brew install portaudio ffmpeg
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install lerobot
-uv pip install 'lerobot[feetech]'
-uv pip install 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
-lerobot-ei-demo
+uv pip install --native-tls 'lerobot[feetech]'
+uv pip install --native-tls 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+lerobot-ei-demo --port 8000
 ```
 
 LeRobot is intentionally installed separately from this app. `uv pip install lerobot` is the default LeRobot installation; add `lerobot[feetech]` for SO-101 motor support. Use the official [LeRobot installation guide](https://huggingface.co/docs/lerobot/en/installation) for platform-specific requirements, calibration, and optional CLI workflows. The app's `[edgeimpulse]` extra contains only the Edge Impulse Linux runtime. The base app install contains neither LeRobot nor Edge Impulse.
+
+### Arduino VENTUNO Q / Debian Linux
 
 On the VENTUNO Q, select uv's CPU-only PyTorch backend so the Qualcomm MPU does not download NVIDIA CUDA packages. Edge Impulse `.eim` deployments remain the app's accelerated inference path; PyTorch is used by the LeRobot control stack and does not target the VENTUNO Q NPU:
 
@@ -40,27 +46,33 @@ sudo apt update
 sudo apt install -y build-essential portaudio19-dev ffmpeg
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install --torch-backend cpu 'lerobot[feetech]'
-uv pip install 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
-lerobot-ei-demo
+uv pip install --native-tls --torch-backend cpu 'lerobot[feetech]'
+uv pip install --native-tls 'lerobot-ei-demo[edgeimpulse] @ git+https://github.com/luisomoreau/lerobot-so101-ei.git'
+lerobot-ei-demo --port 8000
 ```
 
 The VENTUNO Q command uses CPU-only PyTorch because its Qualcomm MPU is not an NVIDIA CUDA device. For full LeRobot calibration and CLI setup, follow the [official LeRobot guide](https://huggingface.co/docs/lerobot/en/installation); the app does not wrap or replace LeRobot's installation process.
 
-For a checkout during development, install LeRobot separately in the active environment (`brew install portaudio` first on macOS if it isn't already installed for `pyaudio`):
+### Source checkout
+
+For a source checkout, install project dependencies first and LeRobot afterward. `uv sync` deliberately removes packages that are not listed in `pyproject.toml`, including LeRobot, so use `--no-sync` when running the app or tests after this setup.
 
 ```bash
-uv pip install 'lerobot[feetech]'
 uv sync --extra edgeimpulse --extra dev --native-tls
-uv run lerobot-ei-demo --port 8000
+uv pip install --native-tls 'lerobot[feetech]'
+npm --prefix lerobot_ei_demo/frontend install
+npm --prefix lerobot_ei_demo/frontend run build
+uv run --no-sync lerobot-ei-demo --port 8000
 ```
 
 On the VENTUNO Q, use the official LeRobot CPU backend while installing the checkout (`sudo apt install -y portaudio19-dev` first if it isn't already installed):
 
 ```bash
+uv sync --extra edgeimpulse --extra dev --native-tls
 uv pip install --torch-backend cpu 'lerobot[feetech]'
-uv pip install --torch-backend cpu -e '.[edgeimpulse,dev]'
-uv run lerobot-ei-demo --port 8000
+npm --prefix lerobot_ei_demo/frontend install
+npm --prefix lerobot_ei_demo/frontend run build
+uv run --no-sync lerobot-ei-demo --port 8000
 ```
 
 Open the printed local URL. If port 8000 is already in use, choose another one:
@@ -79,6 +91,15 @@ uv run lerobot-ei-demo --host 0.0.0.0 --port 8000
 
 The VENTUNO Q and client device must be on the same network, and any device firewall must allow inbound TCP traffic on the selected port. Binding to `0.0.0.0` exposes the local control UI to that network, so use a trusted LAN or specify a restricted host/firewall rule.
 
+## Using the App
+
+1. Expand **Robot setup** and choose or create a saved robot pair. Configure its leader/follower ports and ensure both calibration indicators are ready.
+2. Use the robot-pair editor's camera setup to name and select the camera streams to display. Selected streams appear across the top workspace row.
+3. Expand **Edge Impulse**, connect with a project API key, select an experiment and deployment target, then download a compatible `.eim` model.
+4. In **Run inference**, enable a model per camera. Each camera can use a different compatible model; detection boxes or centroid pointers are drawn into its stream.
+5. Use **Data collection** to save a current frame to the connected Edge Impulse training set.
+6. Expand **Play** to choose a camera and model, then start a timed circle-placement challenge. The top action row displays the countdown, live score, Replay, and Stop controls.
+
 ## Hardware Setup
 
 The application currently targets one SO-101 leader and one SO-101 follower.
@@ -95,9 +116,9 @@ The application currently targets one SO-101 leader and one SO-101 follower.
 4. Start the app and verify the saved leader and follower ports in the setup controls.
 5. Start teleoperation only after the follower workspace is clear and the operator has access to the physical emergency stop.
 
-The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Open **Set up robot pair** to run a guarded calibration session directly in the UI: select a role, capture center, move through the safe range while watching live encoder values, then save or stop without saving.
+The app uses `connect(calibrate=False)` for normal startup so it never silently opens LeRobot's interactive calibration prompts. The configuration rail reports whether leader and follower calibration files are present. Open **Robot setup**, then **Edit robot** or **Add new robot**, to run a guarded calibration session directly in the UI: select a role, capture center, move through the safe range while watching live encoder values, then save or stop without saving.
 
-Use **Set up robot pair** in the Robot setup panel to select and persist the leader and follower ports, import a calibration JSON for either role, and open the LeRobot calibration commands. Port assignments are stored in LeRobot's official `~/.cache/huggingface/lerobot/ports/` directory. Imported files are validated and stored at the official role paths under `~/.cache/huggingface/lerobot/calibration/`.
+Use the **Robot setup** editor to select and persist leader/follower ports, import a calibration JSON for either role, and open the LeRobot calibration commands. Port assignments are stored in LeRobot's official `~/.cache/huggingface/lerobot/ports/` directory. Imported files are validated and stored at the official role paths under `~/.cache/huggingface/lerobot/calibration/`.
 
 ### Add a new SO-101 pair
 
@@ -148,7 +169,7 @@ If either calibration status remains **needs calibration**, do not start teleope
 
 The setup page detects OpenCV camera indices and allows additional indices to be entered manually.
 
-1. Select **Set up cameras**.
+1. Expand **Robot setup**, then select **Edit robot** or **Add new robot** and open **Camera setup**.
 2. Name each camera using a booth-friendly name such as `Overhead` or `Wrist`.
 3. Select the cameras to use.
 4. Save the configuration.
@@ -167,10 +188,10 @@ The configuration rail can build and download `.eim` models directly from Edge I
 
 The backend uses the versioned Studio API base URL `https://studio.edgeimpulse.com/v1`; project API requests therefore resolve under `/v1/api/...`.
 
-1. Paste an Edge Impulse API key and select **Connect project**.
-2. Choose the project, then choose the experiment/impulse to deploy. Projects with several experiments expose each one in the **Experiment** selector.
+1. Paste a project-scoped Edge Impulse API key and select **Connect project**. The application resolves the single project available to that key; there is no project picker.
+2. Choose the experiment/impulse to deploy. Projects with several impulses expose each one in the **Experiment** selector.
 3. Targets that do not match the host operating system and CPU architecture are greyed out and cannot be selected.
-4. Select **Download model**. The app starts a Studio build job for the selected experiment, polls it, then stores the executable `.eim` file.
+4. Select **Download model**. The app starts a Studio build job for the selected impulse, polls it, then stores the executable `.eim` file.
 
 Downloaded models are stored in the directory named by `EI_MODELS_DIR` (default `models/`). Model chips in the configuration rail show which files can run here; incompatible files are struck through.
 
@@ -188,6 +209,12 @@ The Data collection section (in the Edge Impulse card) has a **Save image** butt
 - **FOMO models, classification models, no model assigned, or frames with no detections**: only the image is uploaded, with no bounding boxes.
 
 Uploads always target the `training` category. `last_upload_at`, `last_upload_status`, and `upload_error` are reported per camera from `/api/inference/status`.
+
+### Play: circle-placement game
+
+The **Play** card (below Edge Impulse) runs a small gamified challenge. Choose a camera, a compatible object-detection model, a circle count (default 3), and a duration (default 60 seconds). Starting a game temporarily pauses other inference assignments and runs the selected model on the game camera. The backend scatters non-overlapping red circles inside that model's active inference zone and draws them directly onto the camera's MJPEG stream.
+
+During the round, a circle turns green while an object detection is inside it and turns red again when the object leaves; the top action row shows the remaining seconds and live score. Each circle is recorded as completed after it has been occupied once, so brief model dropouts do not discard progress. Completing every circle before the deadline wins the game; the final circles remain visible until **Replay** or **Stop game**. When the game ends or is stopped, the prior inference assignments are restored.
 
 ## Development
 
@@ -210,7 +237,7 @@ The Python server serves `frontend/dist/` when it exists and falls back to the s
 
 The header uses locally bundled Arduino, Edge Impulse, LeRobot/LeLab, and VENTUNO Q image assets under `frontend/public/assets/`. The VENTUNO Q product image is presented as a large borderless header visual, and the live SO-101 model card uses a compact viewport so the robot and controls remain visible together. Branding does not require external requests at runtime.
 
-The web app uses a full-width three-column workspace on desktop with a white-to-blue diagonal page background: configuration on the left, selected camera streams in a narrower middle column, and the teleoperation control, live URDF, and joint telemetry on the right. Camera feeds keep their normal preview geometry. The teleoperation control sits directly above the robot view. Primary controls use navy blue. Robot ports, on-demand camera previews/names/selections, and the Edge Impulse project/target/download controls live in the configuration rail. Camera previews open only after selecting **Add cameras**. The Edge Impulse API key field is masked and is never written to browser storage. Per-camera inference runs in the backend and annotates each selected stream independently.
+The web app uses a desktop workspace with a configuration rail on the left. All selected camera streams appear across the top workspace row; the live SO-101 model and joint encoder timeline share the row beneath it. Primary controls use navy blue. Robot ports, on-demand camera previews/names/selections, and Edge Impulse model download controls live in the configuration rail. Camera previews are available in the robot editor's **Camera setup** section. The Edge Impulse API key field is masked and is never written to browser storage. Per-camera inference runs in the backend and annotates each selected stream independently.
 
 ## Testing
 
@@ -255,6 +282,9 @@ GET  /api/inference/status
 POST /api/inference/assign            { camera_id, model_id, enabled, confidence }
 POST /api/inference/stop              ?camera_id=
 POST /api/inference/upload            ?camera_id=
+POST /api/game/start                  { camera_id, model_id, circle_count, duration_s }
+POST /api/game/stop
+GET  /api/game/status
 ```
 
 The telemetry stream publishes normalized joint names:
