@@ -129,12 +129,14 @@ def test_status_finishes_when_every_circle_is_occupied() -> None:
     assert status["outcome"] == "won"
 
 
-def test_status_finishes_once_time_expires() -> None:
+def test_frame_captured_after_the_deadline_loses() -> None:
     game = GameService()
     game.start("opencv:0", circle_count=3, duration_s=60)
     with game._lock:
         game._started_at -= 61
 
+    frame = np.zeros((100, 100, 3), dtype="uint8")
+    game.apply("opencv:0", frame, [])
     status = game.status()
 
     assert status["active"] is False
@@ -153,6 +155,27 @@ def test_status_declares_a_complete_board_a_win_at_the_deadline() -> None:
 
     status = game.status()
 
+    assert status["finished"] is True
+    assert status["outcome"] == "won"
+
+
+def test_frame_captured_before_the_deadline_wins_after_slow_inference() -> None:
+    game = GameService()
+    game.start("opencv:0", circle_count=1, duration_s=60)
+    with game._lock:
+        game._circles = [Circle(id=0, x=0.5, y=0.5, radius=0.1)]
+        game._placed = True
+        game._started_at -= 61
+
+    frame = np.zeros((100, 100, 3), dtype="uint8")
+    game.apply(
+        "opencv:0",
+        frame,
+        [{"x": 45, "y": 45, "width": 10, "height": 10}],
+        observed_at=game._started_at + 59.9,
+    )
+
+    status = game.status()
     assert status["finished"] is True
     assert status["outcome"] == "won"
 

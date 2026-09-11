@@ -176,6 +176,30 @@ def _mask_unused_regions(frame: Any, runner: RunnerState) -> Any:
     return cv2.addWeighted(overlay, 0.6, frame, 0.4, 0)
 
 
+def _active_zone(
+    frame_shape: tuple[int, ...], runner: RunnerState
+) -> tuple[float, float, float, float]:
+    """Return the (x0, y0, x1, y1) fraction of the frame actually seen by the model.
+
+    Only "fit-shortest" crops part of the frame away (see `_mask_unused_regions`);
+    every other resize mode feeds the model the whole frame.
+    """
+    if runner.resize_mode != "fit-shortest":
+        return (0.0, 0.0, 1.0, 1.0)
+    frame_height, frame_width = frame_shape[:2]
+    source_aspect = frame_width / frame_height
+    model_aspect = runner.width / runner.height
+    if source_aspect > model_aspect:
+        used_width = frame_height * model_aspect
+        left = (frame_width - used_width) / 2
+        return (left / frame_width, 0.0, (left + used_width) / frame_width, 1.0)
+    if source_aspect < model_aspect:
+        used_height = frame_width / model_aspect
+        top = (frame_height - used_height) / 2
+        return (0.0, top / frame_height, 1.0, (top + used_height) / frame_height)
+    return (0.0, 0.0, 1.0, 1.0)
+
+
 class ModelCatalog:
     def __init__(self, root: Path | None = None) -> None:
         self.root = root or Path(os.getenv("EI_MODELS_DIR", "models"))
@@ -370,19 +394,22 @@ class InferenceService:
     def annotate(self, camera_id: str, frame: Any) -> Any:
         import cv2
 
+        captured_at = time.time()
         detections: list[dict[str, Any]] = []
+        zone = (0.0, 0.0, 1.0, 1.0)
         with self._lock:
             self._last_frames[camera_id] = frame.copy()
             assignment = self._assignments.get(camera_id)
             if assignment is None or not assignment.enabled or not assignment.model_id:
                 self._last_detections.pop(camera_id, None)
                 self._last_model.pop(camera_id, None)
-                return self._apply_game(camera_id, frame, detections)
+                return self._apply_game(camera_id, frame, detections, zone, captured_at)
             model = self.catalog.find(assignment.model_id)
         if model is None:
-            return self._apply_game(camera_id, frame, detections)
+            return self._apply_game(camera_id, frame, detections, zone, captured_at)
         try:
             runner = self._runner_for(model)
+            zone = _active_zone(frame.shape, runner)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             with runner.lock:
                 features, _ = (
@@ -455,11 +482,24 @@ class InferenceService:
                 if current is not None:
                     current.status = "error"
                     current.error = str(error)
-        return self._apply_game(camera_id, frame, detections)
+        return self._apply_game(camera_id, frame, detections, zone, captured_at)
 
     def _apply_game(
-        self, camera_id: str, frame: Any, detections: list[dict[str, Any]]
+        self,
+        camera_id: str,
+        frame: Any,
+        detections: list[dict[str, Any]],
+        zone: tuple[float, float, float, float],
+        captured_at: float,
     ) -> Any:
         if self.game is None:
             return frame
-        return self.game.apply(camera_id, frame, detections)
+        return self.game.apply(camera_id, frame, detections, zone, captured_at)
+
+    def disable_all(self, except_camera_id: str | None = None) -> None:
+        """Stop any currently-running inference other than `except_camera_id`."""
+        with self._lock:
+            for camera_id, assignment in self._assignments.items():
+                if camera_id == except_camera_id:
+                    continue
+                assignment.enabled = False
