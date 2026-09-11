@@ -1,39 +1,97 @@
 from collections.abc import Iterator
-from threading import Event, Lock
+from dataclasses import dataclass
+from threading import Condition, Event, Lock, Thread
 from typing import Any
+
+
+@dataclass
+class CameraSource:
+    stop_event: Event
+    frame_ready: Event
+    condition: Condition
+    subscribers: int = 0
+    frame: bytes | None = None
+    version: int = 0
+    inference: Any | None = None
 
 
 class CameraStreamRegistry:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._streams: dict[str, list[tuple[bool, Event]]] = {}
+        self._sources: dict[str, CameraSource] = {}
 
-    def register(self, camera_id: str, preview: bool) -> Event:
-        stop_event = Event()
+    def subscribe(
+        self, camera_id: str, preview: bool, inference: Any | None
+    ) -> CameraSource:
         with self._lock:
-            self._streams.setdefault(camera_id, []).append((preview, stop_event))
-        return stop_event
+            source = self._sources.get(camera_id)
+            if source is None:
+                source = CameraSource(Event(), Event(), Condition(Lock()))
+                self._sources[camera_id] = source
+                Thread(
+                    target=self._capture,
+                    args=(camera_id, source),
+                    name=f"camera-{camera_id}",
+                    daemon=True,
+                ).start()
+            source.subscribers += 1
+            if not preview and inference is not None:
+                source.inference = inference
+            return source
 
-    def unregister(self, camera_id: str, stop_event: Event) -> None:
+    def unsubscribe(self, camera_id: str, source: CameraSource) -> None:
         with self._lock:
-            streams = self._streams.get(camera_id, [])
-            remaining = [entry for entry in streams if entry[1] is not stop_event]
-            if remaining:
-                self._streams[camera_id] = remaining
-            else:
-                self._streams.pop(camera_id, None)
+            source.subscribers -= 1
+            if source.subscribers <= 0 and self._sources.get(camera_id) is source:
+                self._sources.pop(camera_id, None)
+                source.stop_event.set()
+                with source.condition:
+                    source.condition.notify_all()
 
     def close(
         self, selected_ids: set[str] | None = None, previews_only: bool = False
     ) -> None:
         with self._lock:
-            streams = list(self._streams.items())
-        for camera_id, entries in streams:
+            sources = list(self._sources.items())
+        for camera_id, source in sources:
             if selected_ids is not None and camera_id in selected_ids:
                 continue
-            for preview, stop_event in entries:
-                if not previews_only or preview:
-                    stop_event.set()
+            if previews_only and source.inference is not None:
+                continue
+            source.stop_event.set()
+
+    @staticmethod
+    def _capture(camera_id: str, source: CameraSource) -> None:
+        import cv2
+
+        camera = cv2.VideoCapture(camera_index(camera_id))
+        if not camera.isOpened():
+            source.stop_event.set()
+            source.frame_ready.set()
+            with source.condition:
+                source.condition.notify_all()
+            camera.release()
+            return
+        try:
+            while not source.stop_event.is_set():
+                success, frame = camera.read()
+                if not success:
+                    break
+                if source.inference is not None:
+                    frame = source.inference.annotate(camera_id, frame)
+                success, encoded = cv2.imencode(".jpg", frame)
+                if not success:
+                    continue
+                with source.condition:
+                    source.frame = encoded.tobytes()
+                    source.version += 1
+                    source.frame_ready.set()
+                    source.condition.notify_all()
+        finally:
+            source.stop_event.set()
+            with source.condition:
+                source.condition.notify_all()
+            camera.release()
 
 
 def camera_index(camera_id: str) -> int:
@@ -49,28 +107,20 @@ def mjpeg_stream(
     preview: bool = False,
     inference: Any | None = None,
 ) -> Iterator[bytes]:
-    import cv2
-
-    stop_event = registry.register(camera_id, preview)
-    camera = cv2.VideoCapture(camera_index(camera_id))
-    if not camera.isOpened():
-        registry.unregister(camera_id, stop_event)
-        camera.release()
-        raise RuntimeError(f"Unable to open camera: {camera_id}")
+    source = registry.subscribe(camera_id, preview, inference)
+    version = -1
     try:
-        while not stop_event.is_set():
-            success, frame = camera.read()
-            if not success:
-                break
-            if inference is not None and not preview:
-                frame = inference.annotate(camera_id, frame)
-            success, encoded = cv2.imencode(".jpg", frame)
-            if success:
-                yield (
-                    b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
-                    + encoded.tobytes()
-                    + b"\r\n"
+        while not source.stop_event.is_set():
+            with source.condition:
+                source.condition.wait_for(
+                    lambda current_version=version: (
+                        source.version != current_version or source.stop_event.is_set()
+                    )
                 )
+                if source.frame is None:
+                    continue
+                version = source.version
+                frame = source.frame
+            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
     finally:
-        camera.release()
-        registry.unregister(camera_id, stop_event)
+        registry.unsubscribe(camera_id, source)

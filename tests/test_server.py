@@ -5,6 +5,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from lerobot_ei_demo import server
+from lerobot_ei_demo.camera import CameraStreamRegistry, mjpeg_stream
 from lerobot_ei_demo.edge_impulse import host_architecture, is_compatible
 from lerobot_ei_demo.server import app
 from lerobot_ei_demo.telemetry import TelemetryHub
@@ -445,6 +446,30 @@ def test_invalid_camera_stream_id_is_rejected() -> None:
     response = client.get("/api/cameras/not-a-camera/stream")
 
     assert response.status_code == 400
+
+
+def test_mjpeg_subscribers_share_a_single_camera_capture(monkeypatch) -> None:
+    captures = []
+
+    def fake_capture(camera_id, source) -> None:
+        captures.append(camera_id)
+        with source.condition:
+            source.frame = b"jpeg"
+            source.version += 1
+            source.frame_ready.set()
+            source.condition.notify_all()
+
+    monkeypatch.setattr(CameraStreamRegistry, "_capture", staticmethod(fake_capture))
+    registry = CameraStreamRegistry()
+    first = mjpeg_stream("opencv:0", registry)
+    second = mjpeg_stream("opencv:0", registry)
+
+    assert next(first).endswith(b"jpeg\r\n")
+    assert next(second).endswith(b"jpeg\r\n")
+    assert captures == ["opencv:0"]
+
+    first.close()
+    second.close()
 
 
 def test_manual_camera_registration_is_persistent(tmp_path, monkeypatch) -> None:
