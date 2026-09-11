@@ -33,6 +33,7 @@ class Circle:
     y: float
     radius: float
     hit: bool = False
+    completed: bool = False
 
 
 class GameService:
@@ -154,7 +155,10 @@ class GameService:
                             <= circle_r**2
                             for detection in detections
                         )
-                if self._circles and all(circle.hit for circle in self._circles):
+                        circle.completed = circle.completed or circle.hit
+                if self._circles and all(circle.completed for circle in self._circles):
+                    for circle in self._circles:
+                        circle.hit = True
                     self._finished = True
                     self._outcome = "won"
                     self._completed_at = observed_at

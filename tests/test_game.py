@@ -112,6 +112,28 @@ def test_circle_returns_red_when_the_detection_leaves() -> None:
     assert game.status()["score"] == 0
 
 
+def test_game_wins_after_every_circle_has_been_occupied_during_the_round() -> None:
+    game = GameService()
+    game.start("opencv:0", circle_count=2, duration_s=60)
+    with game._lock:
+        game._circles = [
+            Circle(id=0, x=0.25, y=0.5, radius=0.1),
+            Circle(id=1, x=0.75, y=0.5, radius=0.1),
+        ]
+        game._placed = True
+
+    frame = np.zeros((100, 100, 3), dtype="uint8")
+    game.apply("opencv:0", frame, [{"x": 20, "y": 45, "width": 10, "height": 10}])
+    assert game.status()["score"] == 1
+
+    game.apply("opencv:0", frame, [{"x": 70, "y": 45, "width": 10, "height": 10}])
+    status = game.status()
+
+    assert status["finished"] is True
+    assert status["outcome"] == "won"
+    assert status["score"] == 2
+
+
 def test_status_finishes_when_every_circle_is_occupied() -> None:
     game = GameService()
     game.start("opencv:0", circle_count=1, duration_s=60)
