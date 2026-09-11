@@ -14,7 +14,7 @@ type CameraInference = { camera_id: string; model_id: string | null; enabled: bo
 type InferenceStatus = { architecture: Architecture; models: EiModel[]; cameras: CameraInference[] };
 type DownloadJob = { id: string; status: string; model: string | null; error: string | null };
 type GameCircle = { id: number; x: number; y: number; radius: number; hit: boolean };
-type GameStatus = { active: boolean; finished: boolean; camera_id?: string; circles?: GameCircle[]; remaining_s?: number; duration_s?: number; score?: number; total?: number };
+type GameStatus = { active: boolean; finished: boolean; camera_id?: string; circles?: GameCircle[]; remaining_s?: number; duration_s?: number; score?: number; total?: number; outcome?: "won" | "lost" | null; elapsed_s?: number };
 type CalibrationRole = "leader" | "follower";
 type RobotProfile = { name: string; leader_port: string; follower_port: string; cameras: Array<{ name: string; camera_index: number }> };
 type CalibrationSession = { status: string; role: CalibrationRole | null; phase: string | null; positions: Record<string, number> | null; ranges: Record<string, { min: number; max: number }> | null; message: string; error: string | null };
@@ -345,7 +345,7 @@ function App() {
 
   return <main>
     <header><div><div className="brand-lockup" aria-label="Arduino, Edge Impulse, and LeRobot"><img src="/assets/arduino.svg" alt="Arduino" /><span>+</span><img src="/assets/edge-impulse.svg" alt="Edge Impulse" /><span>+</span><img className="lerobot-logo" src="/assets/lerobot.png" alt="LeRobot" /></div><h1>Teleoperated Arm</h1><p>Prepare the SO-101, then move into a local robotics session. Perception stays on the VENTUNO Q while the arm remains responsive.</p></div></header>
-    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button>{gameStatus.camera_id && <div className="game-actions"><span>{gameStatus.active ? `${Math.ceil(gameStatus.remaining_s ?? 0)}s` : "Time up"} · Score: {gameStatus.score}/{gameStatus.total}</span><button type="button" onClick={startGame} disabled={!gameCameraId || !gameModelId}>Replay</button><button type="button" className="secondary-button" onClick={stopGame}>Stop game</button></div>}<div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
+    <section className="actions"><button type="button" onClick={toggleTeleoperation} disabled={busy || ports.length < 2}>{operationActive ? "Stop teleoperation" : "Start teleoperation"}</button>{gameStatus.camera_id && <div className="game-actions"><div className="game-score">{gameStatus.active ? <><strong>{Math.ceil(gameStatus.remaining_s ?? 0)}s</strong><span>Score {gameStatus.score}/{gameStatus.total}</span></> : gameStatus.outcome === "won" ? <strong>You won in {(gameStatus.elapsed_s ?? 0).toFixed(1)} seconds! 🎉</strong> : <strong>You lost... 😞, you can do better next time!</strong>}</div><button type="button" onClick={startGame} disabled={!gameCameraId || !gameModelId}>Replay</button><button type="button" className="secondary-button" onClick={stopGame}>Stop game</button></div>}<div className="status"><span className={operationActive ? "dot active" : "dot"}></span>{status}</div></section>
     <div className="app-layout">
       <div className="config-column">
       <aside className="config-panel" aria-label="Robot setup">

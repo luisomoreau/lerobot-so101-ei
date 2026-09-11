@@ -96,9 +96,12 @@ def test_apply_ignores_detections_outside_circle_radius() -> None:
 
 def test_circle_returns_red_when_the_detection_leaves() -> None:
     game = GameService()
-    game.start("opencv:0", circle_count=1, duration_s=60)
+    game.start("opencv:0", circle_count=2, duration_s=60)
     with game._lock:
-        game._circles = [Circle(id=0, x=0.5, y=0.5, radius=0.1)]
+        game._circles = [
+            Circle(id=0, x=0.5, y=0.5, radius=0.1),
+            Circle(id=1, x=0.1, y=0.1, radius=0.1),
+        ]
         game._placed = True
 
     frame = np.zeros((100, 100, 3), dtype="uint8")
@@ -109,18 +112,21 @@ def test_circle_returns_red_when_the_detection_leaves() -> None:
     assert game.status()["score"] == 0
 
 
-def test_status_does_not_finish_before_the_timer_expires() -> None:
+def test_status_finishes_when_every_circle_is_occupied() -> None:
     game = GameService()
     game.start("opencv:0", circle_count=1, duration_s=60)
     with game._lock:
-        game._circles = [Circle(id=0, x=0.5, y=0.5, radius=0.1, hit=True)]
+        game._circles = [Circle(id=0, x=0.5, y=0.5, radius=0.1)]
         game._placed = True
 
+    frame = np.zeros((100, 100, 3), dtype="uint8")
+    game.apply("opencv:0", frame, [{"x": 45, "y": 45, "width": 10, "height": 10}])
     status = game.status()
 
-    assert status["active"] is True
-    assert status["finished"] is False
+    assert status["active"] is False
+    assert status["finished"] is True
     assert status["score"] == 1
+    assert status["outcome"] == "won"
 
 
 def test_status_finishes_once_time_expires() -> None:
@@ -134,6 +140,7 @@ def test_status_finishes_once_time_expires() -> None:
     assert status["active"] is False
     assert status["finished"] is True
     assert status["remaining_s"] == 0.0
+    assert status["outcome"] == "lost"
 
 
 def test_expired_game_keeps_the_final_circle_state_on_later_frames() -> None:

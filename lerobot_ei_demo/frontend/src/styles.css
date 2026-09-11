@@ -95,7 +95,10 @@ h2 { margin: 0 0 .8rem; color: #40514b; font-size: .78rem; font-weight: 800; let
 .muted { color: #80908a; font-size: .92rem; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 2rem; }
 main > .actions { margin-top: 1.5rem; margin-bottom: 0; }
-.game-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .45rem; color: #40514b; font: 800 .78rem "Arial Narrow", "Avenir Next", sans-serif; }
+.game-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .55rem; color: #40514b; font: 800 .78rem "Arial Narrow", "Avenir Next", sans-serif; }
+.game-score { display: inline-flex; align-items: baseline; gap: .5rem; color: #40514b; }
+.game-score strong { font: 800 1.35rem/1 "Arial Narrow", "Avenir Next", sans-serif; }
+.game-score span { font: 800 .9rem "Arial Narrow", "Avenir Next", sans-serif; }
 .game-actions button { min-height: 2.2rem; padding: 0 .65rem; font-size: .72rem; }
 .game-actions .secondary-button { background: #fff; color: #173b68; border-color: #173b68; }
 .status { display: inline-flex; align-items: center; gap: .55rem; padding: .7rem 1rem; border: 1px solid #c2d1ca; border-radius: 10px; background: #fff; color: #63736d; font-size: .78rem; font-weight: 800; box-shadow: 0 2px 8px rgba(40, 73, 61, .05); }

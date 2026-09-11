@@ -47,6 +47,8 @@ class GameService:
         self._duration_s = DEFAULT_DURATION_S
         self._started_at = 0.0
         self._finished = False
+        self._outcome: str | None = None
+        self._completed_at = 0.0
 
     def start(
         self,
@@ -62,6 +64,8 @@ class GameService:
             self._duration_s = max(5.0, float(duration_s))
             self._started_at = time.time()
             self._finished = False
+            self._outcome = None
+            self._completed_at = 0.0
         return self.status()
 
     def stop(self) -> dict[str, object]:
@@ -70,19 +74,25 @@ class GameService:
             self._circles = []
             self._placed = False
             self._finished = False
+            self._outcome = None
+            self._completed_at = 0.0
         return self.status()
 
     def status(self) -> dict[str, object]:
         with self._lock:
             if self._camera_id is None:
                 return {"active": False, "finished": False}
-            remaining = max(0.0, self._duration_s - (time.time() - self._started_at))
-            finished = self._finished or remaining <= 0
-            self._finished = finished
+            now = time.time()
+            remaining = max(0.0, self._duration_s - (now - self._started_at))
             score = sum(1 for c in self._circles if c.hit)
+            if not self._finished and remaining <= 0:
+                self._finished = True
+                self._outcome = "lost"
+                self._completed_at = now
+            elapsed = (self._completed_at or now) - self._started_at
             return {
-                "active": not finished,
-                "finished": finished,
+                "active": not self._finished,
+                "finished": self._finished,
                 "camera_id": self._camera_id,
                 "circles": [
                     {"id": c.id, "x": c.x, "y": c.y, "radius": c.radius, "hit": c.hit}
@@ -92,6 +102,8 @@ class GameService:
                 "duration_s": self._duration_s,
                 "score": score,
                 "total": self._circle_count,
+                "outcome": self._outcome,
+                "elapsed_s": round(elapsed, 1),
             }
 
     def apply(
@@ -116,6 +128,8 @@ class GameService:
                 self._placed = True
             if time.time() - self._started_at >= self._duration_s:
                 self._finished = True
+                self._outcome = "lost"
+                self._completed_at = time.time()
             frame_height, frame_width = frame.shape[:2]
             min_dim = min(frame_width, frame_height)
             if not self._finished:
@@ -131,6 +145,10 @@ class GameService:
                         <= circle_r**2
                         for detection in detections
                     )
+                if self._circles and all(circle.hit for circle in self._circles):
+                    self._finished = True
+                    self._outcome = "won"
+                    self._completed_at = time.time()
             for circle in self._circles:
                 center = (round(circle.x * frame_width), round(circle.y * frame_height))
                 radius = round(circle.radius * min_dim)
