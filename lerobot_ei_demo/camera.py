@@ -13,6 +13,8 @@ class CameraSource:
     frame: bytes | None = None
     version: int = 0
     inference: Any | None = None
+    pending_frame: Any | None = None
+    inference_thread: Thread | None = None
 
 
 class CameraStreamRegistry:
@@ -37,6 +39,14 @@ class CameraStreamRegistry:
             source.subscribers += 1
             if not preview and inference is not None:
                 source.inference = inference
+                if source.inference_thread is None:
+                    source.inference_thread = Thread(
+                        target=self._infer,
+                        args=(camera_id, source),
+                        name=f"inference-{camera_id}",
+                        daemon=True,
+                    )
+                    source.inference_thread.start()
             return source
 
     def unsubscribe(self, camera_id: str, source: CameraSource) -> None:
@@ -77,14 +87,13 @@ class CameraStreamRegistry:
                 success, frame = camera.read()
                 if not success:
                     break
-                if source.inference is not None:
-                    frame = source.inference.annotate(camera_id, frame)
                 success, encoded = cv2.imencode(".jpg", frame)
                 if not success:
                     continue
                 with source.condition:
                     source.frame = encoded.tobytes()
                     source.version += 1
+                    source.pending_frame = frame
                     source.frame_ready.set()
                     source.condition.notify_all()
         finally:
@@ -92,6 +101,34 @@ class CameraStreamRegistry:
             with source.condition:
                 source.condition.notify_all()
             camera.release()
+
+    @staticmethod
+    def _infer(camera_id: str, source: CameraSource) -> None:
+        import cv2
+
+        while not source.stop_event.is_set():
+            with source.condition:
+                source.condition.wait_for(
+                    lambda: (
+                        source.pending_frame is not None or source.stop_event.is_set()
+                    )
+                )
+                if source.stop_event.is_set():
+                    return
+                frame = source.pending_frame
+                source.pending_frame = None
+            inference = source.inference
+            if inference is None or frame is None:
+                continue
+            frame = inference.annotate(camera_id, frame)
+            success, encoded = cv2.imencode(".jpg", frame)
+            if not success:
+                continue
+            with source.condition:
+                source.frame = encoded.tobytes()
+                source.version += 1
+                source.frame_ready.set()
+                source.condition.notify_all()
 
 
 def camera_index(camera_id: str) -> int:

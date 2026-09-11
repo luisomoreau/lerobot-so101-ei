@@ -1,11 +1,11 @@
 from pathlib import Path
-from threading import Lock
+from threading import Condition, Event, Lock, Thread
 
 import numpy as np
 from fastapi.testclient import TestClient
 
 from lerobot_ei_demo import server
-from lerobot_ei_demo.camera import CameraStreamRegistry, mjpeg_stream
+from lerobot_ei_demo.camera import CameraSource, CameraStreamRegistry, mjpeg_stream
 from lerobot_ei_demo.edge_impulse import host_architecture, is_compatible
 from lerobot_ei_demo.server import app
 from lerobot_ei_demo.telemetry import TelemetryHub
@@ -470,6 +470,27 @@ def test_mjpeg_subscribers_share_a_single_camera_capture(monkeypatch) -> None:
 
     first.close()
     second.close()
+
+
+def test_inference_worker_publishes_annotated_frames() -> None:
+    class FakeInference:
+        def annotate(self, camera_id, frame):
+            assert camera_id == "opencv:0"
+            return np.full_like(frame, 255)
+
+    source = CameraSource(
+        Event(), Event(), Condition(Lock()), inference=FakeInference()
+    )
+    source.pending_frame = np.zeros((8, 8, 3), dtype="uint8")
+    worker = Thread(target=CameraStreamRegistry._infer, args=("opencv:0", source))
+    worker.start()
+    assert source.frame_ready.wait(timeout=1)
+    source.stop_event.set()
+    with source.condition:
+        source.condition.notify_all()
+    worker.join(timeout=1)
+
+    assert source.frame is not None
 
 
 def test_manual_camera_registration_is_persistent(tmp_path, monkeypatch) -> None:
