@@ -143,6 +143,20 @@ def test_status_finishes_once_time_expires() -> None:
     assert status["outcome"] == "lost"
 
 
+def test_status_declares_a_complete_board_a_win_at_the_deadline() -> None:
+    game = GameService()
+    game.start("opencv:0", circle_count=1, duration_s=60)
+    with game._lock:
+        game._circles = [Circle(id=0, x=0.5, y=0.5, radius=0.1, hit=True)]
+        game._placed = True
+        game._started_at -= 61
+
+    status = game.status()
+
+    assert status["finished"] is True
+    assert status["outcome"] == "won"
+
+
 def test_expired_game_keeps_the_final_circle_state_on_later_frames() -> None:
     game = GameService()
     game.start("opencv:0", circle_count=1, duration_s=60)

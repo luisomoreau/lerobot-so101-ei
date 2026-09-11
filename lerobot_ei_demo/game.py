@@ -85,10 +85,15 @@ class GameService:
             now = time.time()
             remaining = max(0.0, self._duration_s - (now - self._started_at))
             score = sum(1 for c in self._circles if c.hit)
-            if not self._finished and remaining <= 0:
-                self._finished = True
-                self._outcome = "lost"
-                self._completed_at = now
+            if not self._finished:
+                if self._placed and self._circles and score == len(self._circles):
+                    self._finished = True
+                    self._outcome = "won"
+                    self._completed_at = now
+                elif remaining <= 0:
+                    self._finished = True
+                    self._outcome = "lost"
+                    self._completed_at = now
             elapsed = (self._completed_at or now) - self._started_at
             return {
                 "active": not self._finished,
@@ -126,28 +131,34 @@ class GameService:
             if not self._placed:
                 self._circles = self._place_circles(zone)
                 self._placed = True
-            if time.time() - self._started_at >= self._duration_s:
-                self._finished = True
-                self._outcome = "lost"
-                self._completed_at = time.time()
             frame_height, frame_width = frame.shape[:2]
             min_dim = min(frame_width, frame_height)
             if not self._finished:
-                for circle in self._circles:
-                    circle_cx = circle.x * frame_width
-                    circle_cy = circle.y * frame_height
-                    circle_r = circle.radius * min_dim
-                    circle.hit = any(
-                        (detection["x"] + detection.get("width", 0) / 2 - circle_cx)
-                        ** 2
-                        + (detection["y"] + detection.get("height", 0) / 2 - circle_cy)
-                        ** 2
-                        <= circle_r**2
-                        for detection in detections
-                    )
+                expired = time.time() - self._started_at >= self._duration_s
+                if not expired:
+                    for circle in self._circles:
+                        circle_cx = circle.x * frame_width
+                        circle_cy = circle.y * frame_height
+                        circle_r = circle.radius * min_dim
+                        circle.hit = any(
+                            (detection["x"] + detection.get("width", 0) / 2 - circle_cx)
+                            ** 2
+                            + (
+                                detection["y"]
+                                + detection.get("height", 0) / 2
+                                - circle_cy
+                            )
+                            ** 2
+                            <= circle_r**2
+                            for detection in detections
+                        )
                 if self._circles and all(circle.hit for circle in self._circles):
                     self._finished = True
                     self._outcome = "won"
+                    self._completed_at = time.time()
+                elif expired:
+                    self._finished = True
+                    self._outcome = "lost"
                     self._completed_at = time.time()
             for circle in self._circles:
                 center = (round(circle.x * frame_width), round(circle.y * frame_height))
